@@ -1,7 +1,7 @@
 # Autor:
 #   Original from K8DP Doug Papay (v0.1)
 #
-#   Adapted v0.2 by EA4HCF Pedro Cabrera
+#   Adapted v0.3 by EA4HCF Pedro Cabrera
 
 
 import ephem
@@ -60,7 +60,7 @@ def MyError():
     print("Failed to find required file!")
     sys.exit()
 
-print("QT Rigdoppler v0.2")
+print("QT Rigdoppler v0.3")
 
 try:
     with open('config.ini') as f:
@@ -79,6 +79,8 @@ TLEFILE = configur.get('satellite','tle_file')
 TLEURL = configur.get('satellite','tle_url')
 SATNAMES = configur.get('satellite','amsatnames')
 SQFILE = configur.get('satellite','sqffile')
+RADIO = configur.get('icom','radio')
+CVIADDR = configur.get('icom','cviaddress')
 ADDRESS = configur.get('hamlib','address')
 PORT = configur.getint('hamlib','port')
 
@@ -99,7 +101,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("QT RigDoppler v0.2")
+        self.setWindowTitle("QT RigDoppler v0.3")
         self.setGeometry(0, 0, 800, 150)
 
         pagelayout = QHBoxLayout()
@@ -221,6 +223,10 @@ class MainWindow(QMainWindow):
                     NORAD_ID=line.split(" ")[0].strip()
         except IOError:
             raise MyError()
+        
+        if NORAD_ID == 0:
+            print("***  Satellite not found in {badfile} file.".format(badfile=SATNAMES))
+            sys.exit()
 
         #   EA4HCF: Now, let's really use PCSat32 dople file .
         #   From SatName,  will get the RX and TX frequencies.
@@ -253,6 +259,9 @@ class MainWindow(QMainWindow):
         global f_cal
         global i_cal
         global mysat
+        global RADIO
+        global CVIADDR
+        global NORAD_ID
         
         F = float(self.rxfreq.text())
         I = float(self.txfreq.text())
@@ -260,16 +269,22 @@ class MainWindow(QMainWindow):
         F0 = float(self.rxfreq.text()) + float(self.rxoffsetbox.text())
         I0 = float(self.txfreq.text()) + float(self.txoffsetbox.text())
 
+        mysat = ""
+
         try:
             with open(TLEFILE, 'r') as f:
                 data = f.readlines()   
                 
                 for index, line in enumerate(data):
                     if NORAD_ID in line[2:7]:
+                        mysat = ephem.readtle(data[index-1], data[index], data[index+1])
                         break
         except IOError:
             raise MyError()
-        mysat = ephem.readtle(data[index-1], data[index], data[index+1])
+        
+        if mysat == "":
+            print("***  Satellite not found in {badfile} file.".format(badfile=TLEFILE))
+            sys.exit()
         
         # EA4HCF: Checking TLE age
         day_of_year = datetime.now().timetuple().tm_yday
@@ -292,33 +307,91 @@ class MainWindow(QMainWindow):
                 print("RX Frequency Offset = {rxfreq_off}".format(rxfreq_off=f_cal))
                 print("TX Frequency Offset = {txfreq_off}".format(txfreq_off=i_cal))
                 
-                # BIG ToDo: Adapt to other Rigs: 705
-                # CV-I for 7900
-                #setup radio here
-                #turn off satellite mode
-                data_to_send = b"W \\0xFE\\0xFE\\0xA2\\0xE2\\0x16\\0x5A\\0x00\\0xFD 14\n"
-                s.sendall(data_to_send)
-                time.sleep(0.2)
-                #turn on scope waterfall
-                s.sendall(b"W \\0xFE\\0xFE\\0xA2\\0xE2\\0x1A\\0x05\\0x01\\0x97\\0x01\\0xFD 16\n")
-                time.sleep(0.2)
-                #show scope during TX
-                s.sendall(b"W \\0xFE\\0xFE\\0xA2\\0xE2\\0x1A\\0x05\\0x01\\0x87\\0x01\\0xFD 16\n")
-                time.sleep(0.2)
-                #set span = 5kHz
-                s.sendall(b"W \\0xFE\\0xFE\\0xA2\\0xE2\\0x1A\\0x05\\0x01\\0x87\\0x01\\0xFD 16\n")
-                time.sleep(0.2)
+                if RADIO == "9700":
+                    # turn off satellite mode
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x16\\0x5A\\0x00\\0xFD 14\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+                    #turn on scope waterfall
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x1A\\0x05\\0x01\\0x97\\0x01\\0xFD 16\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+                    #show scope during TX
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x1A\\0x05\\0x01\\0x87\\0x01\\0xFD 16\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+                    #set span = 5kHz
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
 
-                # BIG ToDo: Adapt to other Rigs: 705
-                # CV-I for 7900
-                #set VFOA to USB-D mode
-                s.sendall(b"V VFOA\n")
-                s.sendall(b"M PKTUSB 3000\n")
-                #set VFOB to USB-D mode
-                s.sendall(b"V VFOB\n")
-                s.sendall(b"M PKTUSB 3000\n")
-                #return to VFOA
-                s.sendall(b"V VFOA\n")
+                    #set VFOA to USB-D mode
+                    s.sendall(b"V VFOA\n")
+                    s.sendall(b"M PKTUSB 3000\n")
+                    time.sleep(0.2)
+                    #set VFOB to USB-D mode
+                    s.sendall(b"V VFOB\n")
+                    s.sendall(b"M PKTUSB 3000\n")
+                    time.sleep(0.2)
+                    #return to VFOA
+                    s.sendall(b"V VFOA\n")
+                    time.sleep(0.2)
+                elif RADIO == "705":
+                    #turn on scope waterfall
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x10\\0x01\\0xFD 12\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+                    #turn on scope waveform
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x11\\0x01\\0xFD 12\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+                    #show scope during TX
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x05\\0x01\\0x73\\0x01\\0xFD 16\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    #set span = 5kHz
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    #set VFOA
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    #set VFOA to USB mode
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    # set initial RX freq
+                    F_string = "F {RXF:.0f}\n".format(RXF=F)
+                    s.send(bytes(F_string, 'ascii'))
+
+                    #set VFOB
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x01\\0xFD 10\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    #set VFOB to USB mode
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    # set initial TX freq
+                    I_string = "F {TXF:.0f}\n".format(TXF=I)
+                    s.send(bytes(I_string, 'ascii'))
+
+                    #set SPLIT operation
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x0F\\0x01\\0xFD 10\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
+
+                    #return to VFOA
+                    cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
+                    s.sendall(cmds.encode('utf-8'))
+                    time.sleep(0.2)
 
                 rx_doppler = F0
                 tx_doppler = I0
@@ -327,6 +400,7 @@ class MainWindow(QMainWindow):
                 while True:
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
+
                     new_rx_doppler = round(rx_dopplercalc(),-1)
                     if new_rx_doppler != rx_doppler:
                         rx_doppler = new_rx_doppler
@@ -353,6 +427,10 @@ class MainWindow(QMainWindow):
 
     def the_exit_button_was_clicked(self):
         sys.exit()
+
+if RADIO != "9700" and RADIO != "705":
+    print("***  Icom radio not supported: {badmodel}".format(badmodel=RADIO))
+    sys.exit()
 
 socket.setdefaulttimeout(15)
 

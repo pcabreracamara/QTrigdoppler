@@ -1,7 +1,7 @@
-# QT RigDoppler v0.2
+# QT RigDoppler v0.3
 
 Based on K8DP Doug Papay rigdoppler (@K8DP_Doug)  
-Adapted v0.2 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)  
+Adapted v0.3 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)  
   
 RigDoppler is a very simple Python3 script to correct doppler effect in radio satellites using Icom rigs connected to a computer.  
   
@@ -22,12 +22,12 @@ Support files and download links:
   
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
-## v0.2 Limitations:
-    1) CV-I commands support for Icom 9700 (work in progress for Icom 705)
-    2) Donwlink and Uplink modulations are not processed from dopler.sql file, only USB-D mode used for GreenCube/IO-117 satellite (work in progress to support more modes)
+## v0.3 Limitations:
+    1) CV-I commands supports both Icom 9700 and Icom 705 radios.
+    2) Donwlink and Uplink modulations are not processed from dopler.sql file, currently USB modulation is set for both Downlink and Uplink VFOs.
     
 ## Basic Configuration:
-    1) Edit *config.ini* file and set your coordinates and altitude:
+    1) Edit *config.ini* file and set your coordinates and altitude in [qth] section:
     
         ;rigdoppler configuration file
         [qth]
@@ -35,6 +35,14 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
         latitude = 48.188
         longitude = -5.708
         altitude = 70
+
+    2) Set your radio, 9700 or 705. Optionally set the CV-I address:
+
+        ;Icom radio model and CV-I address
+        [icom]
+        ; Acepted models are 705 or 9700
+        radio = 705
+        cviaddress = A4
   
 ## Operation:  
     1) Open TCP connection from your computer to Icom rig using HamLib *rigctld* command:
