@@ -1,6 +1,6 @@
 # QT RigDoppler v0.2
 
-Autor: K8DP Doug Papay v0.1 (@K8DP_Doug)  
+Based on K8DP Doug Papay rigdoppler (@K8DP_Doug)  
 Adapted v0.2 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)  
   
 RigDoppler is a very simple Python3 script to correct doppler effect in radio satellites using Icom rigs connected to a computer.  
