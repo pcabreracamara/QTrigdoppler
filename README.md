@@ -23,8 +23,8 @@ Support files and download links:
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
 ## v0.2 Limitations:
-    1) CV-I commands support for Icom 7900 (work in progress)
-    2) Donwlink and Uplink modulations are not processed from dopler.sql file (work in progress)
+    1) CV-I commands support for Icom 7900 (work in progress for Icom 705)
+    2) Donwlink and Uplink modulations are not processed from dopler.sql file, only USB-D mode used for GreenCube/IO-117 satellite (work in progress to support more modes)
     
 ## Basic Configuration:
     1) Edit *config.ini* file and set your coordinates and altitude:
