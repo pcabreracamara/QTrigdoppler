@@ -38,7 +38,8 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
   
 ## Operation:  
     1) Open TCP connection from your computer to Icom rig using HamLib *rigctld* command:
-    
+
+      Icom 7900: rigctld -m 3081 -r /dev/YOUR_DEVICE -s 115200 -T 127.0.0.1
       Icom 705: rigctld -m 3085 -r /dev/YOUR_DEVICE -c 0xA4 -s 57600 -T 127.0.0.1
 
     2) Check *config.ini* file and review all parameters:  
