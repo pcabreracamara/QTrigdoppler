@@ -3,7 +3,7 @@
 Autor: K8DP Doug Papay v0.1 (@K8DP_Doug)  
 Adapted v0.2 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)  
   
-RigDoppler is a very simple Python3 script to correct doppler efect in radio satellites using Icom rigs connected to a computer.  
+RigDoppler is a very simple Python3 script to correct doppler effect in radio satellites using Icom rigs connected to a computer.  
   
 ## Requeriments:  
     1) Python3  
@@ -22,6 +22,10 @@ Support files and download links:
   
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
+## v0.2 Limitations:
+    1) CV-I commands support for Icom 7900 (work in progress)
+    2) Donwlink and Uplink modulations are not processed from dopler.sql file (work in progress)
+    
 ## Basic Configuration:
     1) Edit *config.ini* file and set your coordinates and altitude:
     
@@ -40,7 +44,7 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
     2) Check *config.ini* file and review all parameters:  
         QTH coordinates: latitude, longitude and altitude 
         
-    3) Execute RigDoppler: python3 /path/to/rigdoppler.py
+    3) Execute RigDoppler: python3 /path/to/QTrigdoppler.py
 
 ## Advanced Configuration:
     1) Support files can be modified in the *config.ini* file:
@@ -62,3 +66,10 @@ tle_file must contains ephemerides two line elements to calculate satellite pass
 sqffile must contains satellites' frequencies (both downlink and uplink), following the same format as the original PCSat32 file.
 
 amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could be correlated with common satellites names used in doppler.sf file. Three columns per each satellite will list NORAD_ID identifier and common satellite name.
+
+## Field Tests:
+
+|     Radio     |   Satellite   |     Tester    |
+| ------------- | ------------- | ------------- |
+|  Icom 7900    |  GreenCube    |     EB1AO     |
+
