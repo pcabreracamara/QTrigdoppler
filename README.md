@@ -23,7 +23,7 @@ Support files and download links:
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
 ## v0.2 Limitations:
-    1) CV-I commands support for Icom 7900 (work in progress for Icom 705)
+    1) CV-I commands support for Icom 9700 (work in progress for Icom 705)
     2) Donwlink and Uplink modulations are not processed from dopler.sql file, only USB-D mode used for GreenCube/IO-117 satellite (work in progress to support more modes)
     
 ## Basic Configuration:
@@ -39,7 +39,7 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 ## Operation:  
     1) Open TCP connection from your computer to Icom rig using HamLib *rigctld* command:
 
-      Icom 7900: rigctld -m 3081 -r /dev/YOUR_DEVICE -s 115200 -T 127.0.0.1
+      Icom 9700: rigctld -m 3081 -r /dev/YOUR_DEVICE -s 115200 -T 127.0.0.1
       Icom 705: rigctld -m 3085 -r /dev/YOUR_DEVICE -c 0xA4 -s 57600 -T 127.0.0.1
 
     2) Check *config.ini* file and review all parameters:  
@@ -72,5 +72,5 @@ amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could b
 
 |     Radio     |   Satellite   |     Tester    |
 | ------------- | ------------- | ------------- |
-|  Icom 7900    |  GreenCube    |     EB1AO     |
+|  Icom 9700    |  GreenCube    |     EB1AO     |
 
