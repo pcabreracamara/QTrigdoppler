@@ -25,6 +25,10 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 ## v0.3 Limitations:
     1) CV-I commands supports both Icom 9700 and Icom 705 radios.
     2) Donwlink and Uplink modulations are not processed from dopler.sql file, currently USB modulation is set for both Downlink and Uplink VFOs.
+    ### v0.3 ToDo List:
+    1) Add a Stop button
+    2) Add an output log, instead of using the command line (if you never take a look to the OS console, surprise!!)
+    3) Improve error handling, some errors are detected and cause the app to exit. Instead, a message will be shown on the output log and the Start button will continue disable until the error is solved.
     
 ## Basic Configuration:
     1) Edit *config.ini* file and set your coordinates and altitude in [qth] section:
@@ -47,8 +51,13 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 ## Operation:  
     1) Open TCP connection from your computer to Icom rig using HamLib *rigctld* command:
 
+      Unix/Linux:
       Icom 9700: rigctld -m 3081 -r /dev/YOUR_DEVICE -s 115200 -T 127.0.0.1
       Icom 705: rigctld -m 3085 -r /dev/YOUR_DEVICE -c 0xA4 -s 57600 -T 127.0.0.1
+
+      Windows:
+      Icom 9700: rigctld -m 3081 -r COMx -s 115200 -T 127.0.0.1
+      Icom 705: rigctld -m 3085 -r COMx -c 0xA4 -s 57600 -T 127.0.0.1
 
     2) Check *config.ini* file and review all parameters:  
         QTH coordinates: latitude, longitude and altitude 
@@ -78,7 +87,11 @@ amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could b
 
 ## Field Tests:
 
-|     Radio     |   Satellite   |     Tester    |
-| ------------- | ------------- | ------------- |
-|  Icom 9700    |  GreenCube    |     EB1AO     |
+|     Radio     |   Satellite   |     Tester    |     Date    |
+| ------------- | ------------- | ------------- | ----------- |
+|  Icom 9700    |  GreenCube    |     EB1AO     |   Nov 23    |
+
+## Feedback and bug report
+
+Yeah, that's life .. but I want to ear from you, so send an email or a tweet and I will answer you.
 
