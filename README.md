@@ -26,9 +26,8 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
     1) CV-I commands supports both Icom 9700 and Icom 705 radios.
     2) Donwlink and Uplink modulations are not processed from dopler.sql file, currently USB modulation is set for both Downlink and Uplink VFOs.
     ### v0.3 ToDo List:
-    1) Add a Stop button
-    2) Add an output log, instead of using the command line (if you never take a look to the OS console, surprise!!)
-    3) Improve error handling, some errors are detected and cause the app to exit. Instead, a message will be shown on the output log and the Start button will continue disable until the error is solved.
+    1) Improve error handling, detect and correct bugs. 
+    2) Improve GUI refresh ratio
     
 ## Basic Configuration:
     1) Edit *config.ini* file and set your coordinates and altitude in [qth] section:
