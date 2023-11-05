@@ -329,59 +329,59 @@ class MainWindow(QMainWindow):
                 if RADIO == "9700":
                     # turn off satellite mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x16\\0x5A\\0x00\\0xFD 14\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #turn on scope waterfall
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x1A\\0x05\\0x01\\0x97\\0x01\\0xFD 16\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #show scope during TX
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x1A\\0x05\\0x01\\0x87\\0x01\\0xFD 16\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #set span = 5kHz
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOA to USB-D mode
-                    ###s.sendall(b"V VFOA\n")
-                    ###s.sendall(b"M PKTUSB 3000\n")
+                    s.sendall(b"V VFOA\n")
+                    s.sendall(b"M PKTUSB 3000\n")
                     time.sleep(0.2)
                     #set VFOB to USB-D mode
-                    ###s.sendall(b"V VFOB\n")
-                    ###s.sendall(b"M PKTUSB 3000\n")
+                    s.sendall(b"V VFOB\n")
+                    s.sendall(b"M PKTUSB 3000\n")
                     time.sleep(0.2)
                     #return to VFOA
-                    ###s.sendall(b"V VFOA\n")
+                    s.sendall(b"V VFOA\n")
                     time.sleep(0.2)
                 elif RADIO == "705":
                     #turn on scope waterfall
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x10\\0x01\\0xFD 12\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #turn on scope waveform
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x11\\0x01\\0xFD 12\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #show scope during TX
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x05\\0x01\\0x73\\0x01\\0xFD 16\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set span = 5kHz
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOA
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOA to USB mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     # set initial RX freq
@@ -390,12 +390,12 @@ class MainWindow(QMainWindow):
 
                     #set VFOB
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x01\\0xFD 10\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOB to USB mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     # set initial TX freq
@@ -404,12 +404,12 @@ class MainWindow(QMainWindow):
 
                     #set SPLIT operation
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x0F\\0x01\\0xFD 10\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #return to VFOA
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
-                    ###s.sendall(cmds.encode('utf-8'))
+                    s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                 rx_doppler = F0
@@ -425,7 +425,7 @@ class MainWindow(QMainWindow):
                         rx_doppler = new_rx_doppler
                         F_string = "F {rx_doppler:.0f}\n".format(rx_doppler=rx_doppler)  
                         self.rxfreq.setText(str(int(rx_doppler)))  
-                        ###s.send(bytes(F_string, 'ascii'))
+                        s.send(bytes(F_string, 'ascii'))
                         time.sleep(0.2)
                         self.LogText.append(F_string.strip())
                     
@@ -434,7 +434,7 @@ class MainWindow(QMainWindow):
                         tx_doppler = new_tx_doppler
                         I_string = "I {tx_doppler:.0f}\n".format(tx_doppler=tx_doppler)
                         self.txfreq.setText(str(int(tx_doppler)))
-                        ###s.send(bytes(I_string, 'ascii'))
+                        s.send(bytes(I_string, 'ascii'))
                         self.LogText.append(I_string.strip())
                         time.sleep(0.2)
 
