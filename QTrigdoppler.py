@@ -28,6 +28,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSpinBox,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -97,6 +98,8 @@ myloc.lon = LONGITUDE
 myloc.lat = LATITUDE
 myloc.elevation = ALTITUDE
 
+SEMAPHORE = True
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -104,7 +107,13 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("QT RigDoppler v0.3")
         self.setGeometry(0, 0, 800, 150)
 
-        pagelayout = QHBoxLayout()
+        pagelayout = QVBoxLayout()
+
+        uplayout = QHBoxLayout()
+        downlayout = QHBoxLayout()
+
+        pagelayout.addLayout(uplayout)
+        pagelayout.addLayout(downlayout)
         
         labels_layout = QVBoxLayout()
         combo_layout = QVBoxLayout()
@@ -113,10 +122,10 @@ class MainWindow(QMainWindow):
 
         combo_layout.setAlignment(Qt.AlignVCenter)
 
-        pagelayout.addLayout(combo_layout)
-        pagelayout.addLayout(labels_layout)
-        pagelayout.addLayout(offset_layout)
-        pagelayout.addLayout(button_layout)
+        uplayout.addLayout(combo_layout)
+        uplayout.addLayout(labels_layout)
+        uplayout.addLayout(offset_layout)
+        uplayout.addLayout(button_layout)
 
         self.sattext = QLabel("Satellite:")
         self.sattext.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
@@ -174,16 +183,20 @@ class MainWindow(QMainWindow):
         offset_layout.addWidget(self.txoffsetbox)
 
          # Start Label
-        self.butontitle = QLabel("Press to connect and start:")
+        self.butontitle = QLabel("Press start to connect to Icom radio:")
         self.butontitle.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         button_layout.addWidget(self.butontitle)
 
         # 1x QPushButton (Start)
         self.Startbutton = QPushButton("Start")
-        #self.Startbutton.setCheckable(True)
-        self.Startbutton.clicked.connect(self.the_button_was_clicked)
+        self.Startbutton.clicked.connect(self.the_start_button_was_clicked)
         self.combo1.currentTextChanged.connect(self.text_changed) 
         button_layout.addWidget(self.Startbutton)
+
+        # 1x QPushButton (Stop)
+        self.Stopbutton = QPushButton("Stop")
+        self.Stopbutton.clicked.connect(self.the_stop_button_was_clicked)
+        button_layout.addWidget(self.Stopbutton)
 
         # Exit Label
         self.exitbutontitle = QLabel("Disconect and exit:")
@@ -195,6 +208,12 @@ class MainWindow(QMainWindow):
         self.Exitbutton.setCheckable(True)
         self.Exitbutton.clicked.connect(self.the_exit_button_was_clicked)
         button_layout.addWidget(self.Exitbutton)
+
+        # Output log
+        self.LogText = QTextEdit()
+        self.LogText.setReadOnly(True)
+        self.LogText.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        downlayout.addWidget(self.LogText)
         
         container = QWidget()
         container.setLayout(pagelayout)
@@ -203,12 +222,12 @@ class MainWindow(QMainWindow):
     def rxoffset_value_changed(self, i):
             global f_cal
             f_cal = i
-            print("*** New RX offset: {thenew}".format(thenew=i))
+            self.LogText.append("*** New RX offset: {thenew}".format(thenew=i))
     
     def txoffset_value_changed(self, i):
             global i_cal
             i_cal = i
-            print("*** New TX offset: {thenew}".format(thenew=i))
+            self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
     def text_changed(self, satname):
         global NORAD_ID
@@ -225,8 +244,7 @@ class MainWindow(QMainWindow):
             raise MyError()
         
         if NORAD_ID == 0:
-            print("***  Satellite not found in {badfile} file.".format(badfile=SATNAMES))
-            sys.exit()
+            self.LogText.append("***  Satellite not found in {badfile} file.".format(badfile=SATNAMES))
 
         #   EA4HCF: Now, let's really use PCSat32 dople file .
         #   From SatName,  will get the RX and TX frequencies.
@@ -243,7 +261,7 @@ class MainWindow(QMainWindow):
                     # ToDo: MANAGE and DISPLAY SAT Down&Up MODE
                     MODEDOWN =  lineb.split(",")[3].strip()
                     MODEUP =  lineb.split(",")[4].strip()
-                    if F == 0 or I == 0:
+                    if NORAD_ID == 0 or F == 0 or I == 0:
                         self.Startbutton.setEnabled(False)
                     else:
                         self.Startbutton.setEnabled(True)
@@ -251,7 +269,7 @@ class MainWindow(QMainWindow):
         except IOError:
             raise MyError()
 
-    def the_button_was_clicked(self):
+    def the_start_button_was_clicked(self):
         global F
         global I
         global F0
@@ -262,6 +280,7 @@ class MainWindow(QMainWindow):
         global RADIO
         global CVIADDR
         global NORAD_ID
+        global SEMAPHORE
         
         F = float(self.rxfreq.text())
         I = float(self.txfreq.text())
@@ -283,86 +302,86 @@ class MainWindow(QMainWindow):
             raise MyError()
         
         if mysat == "":
-            print("***  Satellite not found in {badfile} file.".format(badfile=TLEFILE))
-            sys.exit()
-        
-        # EA4HCF: Checking TLE age
-        day_of_year = datetime.now().timetuple().tm_yday
-        tleage = int(data[index][20:23])
-        diff = day_of_year - tleage
+            self.LogText.append("***  Satellite not found in {badfile} file.".format(badfile=TLEFILE))
+            self.Startbutton.setEnabled(False)
+            return
+        else:
+            day_of_year = datetime.now().timetuple().tm_yday
+            tleage = int(data[index][20:23])
+            diff = day_of_year - tleage
 
-        if diff > 7:
-            print("***  Warning, your TLE file is getting older: {days} days.".format(days=diff))
-        
-        self.Startbutton.setEnabled(False)
+            if diff > 7:
+                self.LogText.append("***  Warning, your TLE file is getting older: {days} days.".format(days=diff))
    
         try:
             with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((ADDRESS, PORT))
                 
-                print("Connected to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
-                print("Tracking: {sat_name}".format(sat_name=mysat.name))
-                print("Recieve Frequency (F) = {rx_freq}".format(rx_freq=F))
-                print("Transmit Frequency (I) = {tx_freq}".format(tx_freq=I))
-                print("RX Frequency Offset = {rxfreq_off}".format(rxfreq_off=f_cal))
-                print("TX Frequency Offset = {txfreq_off}".format(txfreq_off=i_cal))
+                self.LogText.append("Connected to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
+                self.LogText.append("Tracking: {sat_name}".format(sat_name=mysat.name))
+                self.LogText.append("Recieve Frequency (F) = {rx_freq}".format(rx_freq=F))
+                self.LogText.append("Transmit Frequency (I) = {tx_freq}".format(tx_freq=I))
+                self.LogText.append("RX Frequency Offset = {rxfreq_off}".format(rxfreq_off=f_cal))
+                self.LogText.append("TX Frequency Offset = {txfreq_off}".format(txfreq_off=i_cal))
+
+                self.Startbutton.setEnabled(False)
                 
                 if RADIO == "9700":
                     # turn off satellite mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x16\\0x5A\\0x00\\0xFD 14\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #turn on scope waterfall
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x1A\\0x05\\0x01\\0x97\\0x01\\0xFD 16\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #show scope during TX
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x1A\\0x05\\0x01\\0x87\\0x01\\0xFD 16\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #set span = 5kHz
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOA to USB-D mode
-                    s.sendall(b"V VFOA\n")
-                    s.sendall(b"M PKTUSB 3000\n")
+                    ###s.sendall(b"V VFOA\n")
+                    ###s.sendall(b"M PKTUSB 3000\n")
                     time.sleep(0.2)
                     #set VFOB to USB-D mode
-                    s.sendall(b"V VFOB\n")
-                    s.sendall(b"M PKTUSB 3000\n")
+                    ###s.sendall(b"V VFOB\n")
+                    ###s.sendall(b"M PKTUSB 3000\n")
                     time.sleep(0.2)
                     #return to VFOA
-                    s.sendall(b"V VFOA\n")
+                    ###s.sendall(b"V VFOA\n")
                     time.sleep(0.2)
                 elif RADIO == "705":
                     #turn on scope waterfall
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x10\\0x01\\0xFD 12\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #turn on scope waveform
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x11\\0x01\\0xFD 12\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
                     #show scope during TX
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x05\\0x01\\0x73\\0x01\\0xFD 16\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set span = 5kHz
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOA
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOA to USB mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     # set initial RX freq
@@ -371,12 +390,12 @@ class MainWindow(QMainWindow):
 
                     #set VFOB
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x01\\0xFD 10\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #set VFOB to USB mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     # set initial TX freq
@@ -385,19 +404,19 @@ class MainWindow(QMainWindow):
 
                     #set SPLIT operation
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x0F\\0x01\\0xFD 10\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                     #return to VFOA
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
-                    s.sendall(cmds.encode('utf-8'))
+                    ###s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
                 rx_doppler = F0
                 tx_doppler = I0
                 step_size = 10.
 
-                while True:
+                while SEMAPHORE == True:
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
 
@@ -406,27 +425,33 @@ class MainWindow(QMainWindow):
                         rx_doppler = new_rx_doppler
                         F_string = "F {rx_doppler:.0f}\n".format(rx_doppler=rx_doppler)  
                         self.rxfreq.setText(str(int(rx_doppler)))  
-                        s.send(bytes(F_string, 'ascii'))
+                        ###s.send(bytes(F_string, 'ascii'))
                         time.sleep(0.2)
-                        print(F_string,end="")
+                        self.LogText.append(F_string.strip())
                     
                     new_tx_doppler = round(tx_dopplercalc(),-1)
                     if new_tx_doppler != tx_doppler:
                         tx_doppler = new_tx_doppler
                         I_string = "I {tx_doppler:.0f}\n".format(tx_doppler=tx_doppler)
                         self.txfreq.setText(str(int(tx_doppler)))
-                        s.send(bytes(I_string, 'ascii'))
-                        print(I_string,end="")
+                        ###s.send(bytes(I_string, 'ascii'))
+                        self.LogText.append(I_string.strip())
                         time.sleep(0.2)
 
                     QApplication.processEvents()
 
         except socket.error:
-            print("Failed to connect to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
+            self.LogText.append("Failed to connect to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
             sys.exit()
 
     def the_exit_button_was_clicked(self):
         sys.exit()
+    
+    def the_stop_button_was_clicked(self):
+        global SEMAPHORE
+        SEMAPHORE = False
+        self.LogText.append("Stopped")
+        self.Startbutton.setEnabled(True)
 
 if RADIO != "9700" and RADIO != "705":
     print("***  Icom radio not supported: {badmodel}".format(badmodel=RADIO))
@@ -438,7 +463,6 @@ try:
    urllib.request.urlretrieve(TLEURL, TLEFILE)
 except Exception as e:
    print("***  Unable to download TLE file: {theurl}".format(theurl=TLEURL))
-
 
 app = QApplication(sys.argv)
 window = MainWindow()
