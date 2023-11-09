@@ -33,14 +33,16 @@ def socketcontext(*args, **kwargs):
     yield s
     s.close()
 
-def tx_dopplercalc(ephemdata, theI0):
+def tx_dopplercalc(ephemdata):
+    global I0
     ephemdata.compute(myloc)
-    doppler = int(theI0 + ephemdata.range_velocity * theI0 / C)
+    doppler = int(I0 + ephemdata.range_velocity * I0 / C)
     return doppler
 
-def rx_dopplercalc(ephemdata, theF0):
+def rx_dopplercalc(ephemdata):
+    global F0
     ephemdata.compute(myloc)
-    doppler = int(theF0 - ephemdata.range_velocity * theF0 / C)
+    doppler = int(F0 - ephemdata.range_velocity * F0 / C)
     return doppler
 
 def MyError():
@@ -62,6 +64,8 @@ except IOError:
 LATITUDE = configur.get('qth','latitude')
 LONGITUDE = configur.get('qth','longitude')
 ALTITUDE = configur.getfloat('qth','altitude')
+STEP_RX = configur.get('qth','step_rx')
+STEP_TX = configur.get('qth','step_tx')
 TLEFILE = configur.get('satellite','tle_file')
 TLEURL = configur.get('satellite','tle_url')
 SATNAMES = configur.get('satellite','amsatnames')
@@ -71,6 +75,8 @@ CVIADDR = configur.get('icom','cviaddress')
 ADDRESS = configur.get('hamlib','address')
 PORT = configur.getint('hamlib','port')
 
+F0=0
+I0=0
 f_cal = 0
 i_cal = 0
 
@@ -89,8 +95,6 @@ class Satellite:
     upmode = ""
     F = 0
     I = 0
-    F0 = 0
-    I0 = 0
     tledata = ""
 
 class MainWindow(QMainWindow):
@@ -162,7 +166,7 @@ class MainWindow(QMainWindow):
         self.rxoffsetbox = QSpinBox()
         self.rxoffsetbox.setMinimum(-3000)
         self.rxoffsetbox.setMaximum(3000)
-        self.rxoffsetbox.setSingleStep(1)
+        self.rxoffsetbox.setSingleStep(STEP_RX)
         self.rxoffsetbox.valueChanged.connect(self.rxoffset_value_changed)
         offset_layout.addWidget(self.rxoffsetbox)
 
@@ -174,7 +178,7 @@ class MainWindow(QMainWindow):
         self.txoffsetbox = QSpinBox()
         self.txoffsetbox.setMinimum(-3000)
         self.txoffsetbox.setMaximum(3000)
-        self.txoffsetbox.setSingleStep(1)
+        self.txoffsetbox.setSingleStep(STEP_TX)
         self.txoffsetbox.valueChanged.connect(self.txoffset_value_changed)
         offset_layout.addWidget(self.txoffsetbox)
 
@@ -224,14 +228,16 @@ class MainWindow(QMainWindow):
 
     def rxoffset_value_changed(self, i):
             global f_cal
+            global F0
             f_cal = i
-            self.my_satellite.F0 = self.my_satellite.F + f_cal
+            F0 = self.my_satellite.F + f_cal
             self.LogText.append("*** New RX offset: {thenew}".format(thenew=i))
     
     def txoffset_value_changed(self, i):
             global i_cal
+            global I0
             i_cal = i
-            self.my_satellite.I0 = self.my_satellite.I + i_cal
+            I0 = self.my_satellite.I + i_cal
             self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
     def text_changed(self, satname):
@@ -259,10 +265,8 @@ class MainWindow(QMainWindow):
             for lineb in sqfdata:
                 if re.search(satname, lineb):
                     self.my_satellite.F = float(lineb.split(",")[1].strip())*1000
-                    self.my_satellite.F0 = self.my_satellite.F + f_cal
                     self.rxfreq.setText(str(self.my_satellite.F))
                     self.my_satellite.I = float(lineb.split(",")[2].strip())*1000
-                    self.my_satellite.I0 = self.my_satellite.I + i_cal
                     self.txfreq.setText(str(self.my_satellite.I))
                     self.my_satellite.downmode =  lineb.split(",")[3].strip()
                     self.my_satellite.upmode =  lineb.split(",")[4].strip()
@@ -338,6 +342,8 @@ class MainWindow(QMainWindow):
         global CVIADDR
         global SEMAPHORE
         global myloc
+        global f_cal
+        global i_cal
         
         try:
             with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -476,21 +482,24 @@ class MainWindow(QMainWindow):
                     s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
 
-                rx_doppler = self.my_satellite.F0
-                tx_doppler = self.my_satellite.I0
+                F0 = self.my_satellite.F + f_cal
+                I0 = self.my_satellite.I + i_cal
+
+                rx_doppler = F0
+                tx_doppler = I0
 
                 while SEMAPHORE == True:
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
 
-                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F0),-1)
+                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata, F0),-1)
                     if new_rx_doppler != rx_doppler:
                         rx_doppler = new_rx_doppler
                         F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
                         s.send(bytes(F_string, 'ascii'))
                         self.my_satellite.F = rx_doppler
                     
-                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I0),-1)
+                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata, I0),-1)
                     if new_tx_doppler != tx_doppler:
                         tx_doppler = new_tx_doppler
                         I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
@@ -504,8 +513,8 @@ class MainWindow(QMainWindow):
             sys.exit()
     
     def recurring_timer(self):
-        self.rxfreq.setText(str(float(self.my_satellite.F)))
-        self.txfreq.setText(str(float(self.my_satellite.I)))
+        self.rxfreq.setText(str(int(self.my_satellite.F)))
+        self.txfreq.setText(str(int(self.my_satellite.I)))
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
