@@ -94,7 +94,9 @@ class Satellite:
     downmode = ""
     upmode = ""
     F = 0
+    F_init = 0
     I = 0
+    I_init = 0
     tledata = ""
 
 class MainWindow(QMainWindow):
@@ -164,9 +166,9 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (RX offset)
         self.rxoffsetbox = QSpinBox()
-        self.rxoffsetbox.setMinimum(-3000)
-        self.rxoffsetbox.setMaximum(3000)
-        self.rxoffsetbox.setSingleStep(STEP_RX)
+        self.rxoffsetbox.setMinimum(-800)
+        self.rxoffsetbox.setMaximum(800)
+        self.rxoffsetbox.setSingleStep(int(STEP_RX))
         self.rxoffsetbox.valueChanged.connect(self.rxoffset_value_changed)
         offset_layout.addWidget(self.rxoffsetbox)
 
@@ -176,9 +178,9 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (TX offset)
         self.txoffsetbox = QSpinBox()
-        self.txoffsetbox.setMinimum(-3000)
-        self.txoffsetbox.setMaximum(3000)
-        self.txoffsetbox.setSingleStep(STEP_TX)
+        self.txoffsetbox.setMinimum(-800)
+        self.txoffsetbox.setMaximum(800)
+        self.txoffsetbox.setSingleStep(int(STEP_TX))
         self.txoffsetbox.valueChanged.connect(self.txoffset_value_changed)
         offset_layout.addWidget(self.txoffsetbox)
 
@@ -230,14 +232,14 @@ class MainWindow(QMainWindow):
             global f_cal
             global F0
             f_cal = i
-            F0 = self.my_satellite.F + f_cal
+            F0 = self.my_satellite.F_init + f_cal
             self.LogText.append("*** New RX offset: {thenew}".format(thenew=i))
     
     def txoffset_value_changed(self, i):
             global i_cal
             global I0
             i_cal = i
-            I0 = self.my_satellite.I + i_cal
+            I0 = self.my_satellite.I_init + i_cal
             self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
     def text_changed(self, satname):
@@ -264,9 +266,9 @@ class MainWindow(QMainWindow):
                 
             for lineb in sqfdata:
                 if re.search(satname, lineb):
-                    self.my_satellite.F = float(lineb.split(",")[1].strip())*1000
+                    self.my_satellite.F = self.my_satellite.F_init = float(lineb.split(",")[1].strip())*1000
                     self.rxfreq.setText(str(self.my_satellite.F))
-                    self.my_satellite.I = float(lineb.split(",")[2].strip())*1000
+                    self.my_satellite.I = self.my_satellite.I_init = float(lineb.split(",")[2].strip())*1000
                     self.txfreq.setText(str(self.my_satellite.I))
                     self.my_satellite.downmode =  lineb.split(",")[3].strip()
                     self.my_satellite.upmode =  lineb.split(",")[4].strip()
@@ -344,6 +346,8 @@ class MainWindow(QMainWindow):
         global myloc
         global f_cal
         global i_cal
+        global F0
+        global I0
         
         try:
             with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -428,7 +432,7 @@ class MainWindow(QMainWindow):
                         sys.exit()
 
                     # set initial RX freq
-                    F_string = "F {RXF:.0f}\n".format(RXF=self.my_satellite.F)
+                    F_string = "F {RXF:.0f}\n".format(RXF=self.my_satellite.F_init)
                     s.send(bytes(F_string, 'ascii'))
 
                     #set VFOB
@@ -474,7 +478,7 @@ class MainWindow(QMainWindow):
                         sys.exit()
 
                     # set initial TX freq
-                    I_string = "F {TXF:.0f}\n".format(TXF=self.my_satellite.I)
+                    I_string = "F {TXF:.0f}\n".format(TXF=self.my_satellite.I_init)
                     s.send(bytes(I_string, 'ascii'))
 
                     #return to VFOA
@@ -492,14 +496,14 @@ class MainWindow(QMainWindow):
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
 
-                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata, F0),-1)
+                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
                     if new_rx_doppler != rx_doppler:
                         rx_doppler = new_rx_doppler
                         F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
                         s.send(bytes(F_string, 'ascii'))
                         self.my_satellite.F = rx_doppler
                     
-                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata, I0),-1)
+                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
                     if new_tx_doppler != tx_doppler:
                         tx_doppler = new_tx_doppler
                         I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
