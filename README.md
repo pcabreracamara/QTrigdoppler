@@ -23,11 +23,13 @@ Support files and download links:
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
 ## v0.3 Limitations:
-    1) CV-I commands supports both Icom 9700 and Icom 705 radios.
-    2) Donwlink and Uplink modulations are not processed for Icom 9700, only USB Data modulation is set for both Downlink and Uplink VFOs (GreenCube).
+    1) CV-I commands supports both Icom 9700 and 705 radios.
+    2) The various SSB,CW,FM,AM modulations are not automatically processed for the 9700 radio, only USB-Data is used as the program has been tested with the GreenCube (for the time being).
+    3) Important for SSB phone satellites: changes in the VFOs frequencies of the radio is not taken into account at the moment, only the frequency of the doppler.sqf file is taken into account for the doppler calculation (manual changes are not taken into account). 
     ### v0.3 ToDo List:
     1) Improve error handling, detect and correct bugs. 
-    2) Let me know if you have something else in mind.
+    2) Solve the limitations.
+    3) Let me know if you have something else in mind.
     
 ## Basic Configuration:
     1) Edit *config.ini* file and set your coordinates and altitude in [qth] section:
