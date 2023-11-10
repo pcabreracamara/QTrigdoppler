@@ -166,8 +166,8 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (RX offset)
         self.rxoffsetbox = QSpinBox()
-        self.rxoffsetbox.setMinimum(-800)
-        self.rxoffsetbox.setMaximum(800)
+        self.rxoffsetbox.setMinimum(-1500)
+        self.rxoffsetbox.setMaximum(1500)
         self.rxoffsetbox.setSingleStep(int(STEP_RX))
         self.rxoffsetbox.valueChanged.connect(self.rxoffset_value_changed)
         offset_layout.addWidget(self.rxoffsetbox)
@@ -178,8 +178,8 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (TX offset)
         self.txoffsetbox = QSpinBox()
-        self.txoffsetbox.setMinimum(-800)
-        self.txoffsetbox.setMaximum(800)
+        self.txoffsetbox.setMinimum(-1500)
+        self.txoffsetbox.setMaximum(1500)
         self.txoffsetbox.setSingleStep(int(STEP_TX))
         self.txoffsetbox.valueChanged.connect(self.txoffset_value_changed)
         offset_layout.addWidget(self.txoffsetbox)
@@ -415,7 +415,7 @@ class MainWindow(QMainWindow):
                         time.sleep(0.2)
                     elif self.my_satellite.downmode == "DATA-USB":
                         #set VFOA to USB mode
-                        cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
+                        cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x01\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
                         time.sleep(0.2)     
                         #set VFOA to DATA mode
