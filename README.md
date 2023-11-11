@@ -73,7 +73,7 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
     3) Execute RigDoppler: python3 /path/to/QTrigdoppler.py
 
 ## Advanced Configuration:
-    1) Support files can be modified in the *config.ini* file:
+    1) Support files used to get satellites frequencies and ephemerides data can be modified in the *config.ini* file:
     
         [satellite]
         ;path to your TLE file
@@ -83,9 +83,6 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
         amsatnames = AmsatNames.txt
         ;path to dopler.sqf file
         sqffile = doppler.sqf
-        [hamlib]
-        address = localhost
-        port = 4532
 
 tle_file must contains ephemerides two line elements to calculate satellite passes over the coordinates in the [qth] section.
 
@@ -93,6 +90,19 @@ sqffile must contains satellites' frequencies (both downlink and uplink), follow
 
 amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could be correlated with common satellites names used in doppler.sf file. Three columns per each satellite will list NORAD_ID identifier and common satellite name.
 
+    2) Hamlib default configuration can be modified in it's section:
+        
+        [hamlib]
+        address = localhost
+        port = 4532
+
+    3) User defined RX and TX offsets values per satellite can de defined in the [offset_profiles] section. Format is the following:
+        - Label "satoffset" followed by incremental number, per each profile: satoffset1, satoffset2, satoffset3, etc.
+        - Satellite name, as found in doppler.sqf file, followed by ":"
+        - RX offset (Hertz) and TX offset, separated by comma ","
+
+        Exmaple: satoffset1 = IO-117:-750,-750
+        
 ## Field Tests:
 
 |     Radio     |   Satellite   |     Tester    |     Date    |
@@ -109,5 +119,5 @@ amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could b
 
 ## Feedback and bug report
 
-Yeah, that's life .. but I want to ear from you, so send an email or a tweet and I will answer you.
+Yeah, that's life .. but I want to hear from you, so send an email or a tweet and I will answer you.
 

@@ -75,6 +75,12 @@ CVIADDR = configur.get('icom','cviaddress')
 ADDRESS = configur.get('hamlib','address')
 PORT = configur.getint('hamlib','port')
 
+useroffsets = {}
+
+for (each_key, each_val) in configur.items('offset_profiles'):
+    # Format SATNAME:RXoffset,TXoffset
+    useroffsets[each_val.split(':')[0]] = each_val.split(':')[1]
+
 F0=0
 I0=0
 f_cal = 0
@@ -243,6 +249,7 @@ class MainWindow(QMainWindow):
             self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
     def text_changed(self, satname):
+        self.LogText.clear()
         #   EA4HCF: Let's use PCSat32 translation from NoradID to Sat names, boring but useful for next step.
         #   From NORAD_ID identifier, will get the SatName to search satellite frequencies in dopler file in next step.
         try:
@@ -279,6 +286,13 @@ class MainWindow(QMainWindow):
                     break
         except IOError:
             raise MyError()
+
+        if satname in useroffsets:
+            self.rxoffsetbox.setValue(int(useroffsets[satname].split(',')[0]))
+            self.txoffsetbox.setValue(int(useroffsets[satname].split(',')[1]))
+        else:
+            self.rxoffsetbox.setValue(0)
+            self.txoffsetbox.setValue(0)
 
         try:
             with open(TLEFILE, 'r') as f:
@@ -517,8 +531,8 @@ class MainWindow(QMainWindow):
             sys.exit()
     
     def recurring_timer(self):
-        self.rxfreq.setText(str(int(self.my_satellite.F)))
-        self.txfreq.setText(str(int(self.my_satellite.I)))
+        self.rxfreq.setText(str(float(self.my_satellite.F)))
+        self.txfreq.setText(str(float(self.my_satellite.I)))
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
