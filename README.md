@@ -5,9 +5,9 @@ Adapted v0.3 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)
   
 RigDoppler is a very simple Python3 script to correct doppler effect in radio satellites using Icom rigs connected to a computer.
 <picture>
- <source media="(prefers-color-scheme: dark)" srcset="https://github.com/pcabreracamara/QTrigdoppler/images/mainWindow.png">
- <source media="(prefers-color-scheme: light)" srcset="https://github.com/pcabreracamara/QTrigdoppler/images/mainWindow.png">
- <img alt="Shows QTRigDoppler GUI." src="https://github.com/pcabreracamara/QTrigdoppler/images/mainWindow.png">
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/pcabreracamara/QTrigdoppler/blob/main/images/mainWindow.png">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/pcabreracamara/QTrigdoppler/blob/main/images/mainWindow.png">
+ <img alt="Shows QTRigDoppler GUI." src="https://github.com/pcabreracamara/QTrigdoppler/blob/main/images/mainWindow.png">
 </picture>  
   
 ## Requeriments:  
