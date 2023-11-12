@@ -35,8 +35,6 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
     1) Improve error handling, detect and correct bugs. 
     2) Solve the limitations.
     3) Let me know if you have something else in mind.
-    4) Add offset profiles menu, so would be really easier to operate SSB sats
-    5) On SSB satellites, read RX frequency so phone satellites could be operated moving in the transpoder
     
 ## Basic Configuration:
     1) Edit *config.ini* file and set your coordinates and altitude in [qth] section:
@@ -96,9 +94,11 @@ amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could b
         address = localhost
         port = 4532
 
-    3) User defined RX and TX offsets values per satellite can de defined in the [offset_profiles] section. Format is the following:
-        - Label "satoffset" followed by incremental number, per each profile: satoffset1, satoffset2, satoffset3, etc.
-        - Satellite name, as found in doppler.sqf file, followed by ":"
+    3) User defined RX and TX offsets values per satellite can de added in the [offset_profiles] section. 
+        
+        Format is the following:
+        - Label "satoffset" followed by incremental number and the symbol "=", per each profile: satoffset1=, satoffset2=, satoffset3=, etc.
+        - Satellite name, as found in doppler.sqf file, followed by ":" and
         - RX offset (Hertz) and TX offset, separated by comma ","
 
         Exmaple: satoffset1 = IO-117:-750,-750

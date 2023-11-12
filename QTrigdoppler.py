@@ -81,8 +81,8 @@ for (each_key, each_val) in configur.items('offset_profiles'):
     # Format SATNAME:RXoffset,TXoffset
     useroffsets[each_val.split(':')[0]] = each_val.split(':')[1]
 
-F0=0
-I0=0
+F0=0.0
+I0=0.0
 f_cal = 0
 i_cal = 0
 
@@ -152,19 +152,28 @@ class MainWindow(QMainWindow):
         self.combo1.addItems(satlist)
         combo_layout.addWidget(self.combo1)
 
+        myFont=QFont()
+        myFont.setBold(True)
+
         # 1x Label: RX freq
         self.rxfreqtitle = QLabel("RX freq:")
         labels_layout.addWidget(self.rxfreqtitle)
 
-        self.rxfreq = QLabel("0")
+        self.rxfreq = QLabel("0.0")
+        self.rxfreq.setFont(myFont)
         labels_layout.addWidget(self.rxfreq)
+        self.rxfreq_onsat = QLabel("0.0")
+        labels_layout.addWidget(self.rxfreq_onsat)
 
         # 1x Label: TX freq
         self.txfreqtitle = QLabel("TX freq:")
         labels_layout.addWidget(self.txfreqtitle)
 
-        self.txfreq = QLabel("0")
+        self.txfreq = QLabel("0.0")
+        self.txfreq.setFont(myFont)
         labels_layout.addWidget(self.txfreq)
+        self.txfreq_onsat = QLabel("0.0")
+        labels_layout.addWidget(self.txfreq_onsat)
 
         # 1x Label: RX Offset
         self.rxoffsetboxtitle = QLabel("RX Offset:")
@@ -337,6 +346,10 @@ class MainWindow(QMainWindow):
         self.Startbutton.setEnabled(True)
     
     def init_worker(self):
+        global SEMAPHORE
+
+        if SEMAPHORE == False:
+            SEMAPHORE = True
         # Pass the function to execute
         self.LogText.append("Connected to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
         self.LogText.append("Tracking: {sat_name}".format(sat_name=self.my_satellite.amsatname))
@@ -532,7 +545,9 @@ class MainWindow(QMainWindow):
     
     def recurring_timer(self):
         self.rxfreq.setText(str(float(self.my_satellite.F)))
+        self.rxfreq_onsat.setText(str(F0))
         self.txfreq.setText(str(float(self.my_satellite.I)))
+        self.txfreq_onsat.setText(str(I0))
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
