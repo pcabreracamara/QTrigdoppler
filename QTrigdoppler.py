@@ -380,6 +380,8 @@ class MainWindow(QMainWindow):
             with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((ADDRESS, PORT))
                 
+                debugfile = open("debug_cmds.txt", "a")
+
                 if RADIO == "9700":
                     # turn off satellite mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x16\\0x5A\\0x00\\0xFD 14\n"
@@ -413,46 +415,64 @@ class MainWindow(QMainWindow):
                     #show scope during TX
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x05\\0x01\\0x73\\0x01\\0xFD 16\n"
                     s.sendall(cmds.encode('utf-8'))
+                    data = s.recv(1024)
+                    print(f"Answer scope during TX: {data!r}", file=debugfile)
                     time.sleep(0.2)
 
                     #set span = 5kHz
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
                     s.sendall(cmds.encode('utf-8'))
+                    data = s.recv(1024)
+                    print(f"Answer set span 5kHz: {data!r}", file=debugfile)
                     time.sleep(0.2)
 
                     #set SPLIT operation
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x0F\\0x01\\0xFD 10\n"
                     s.sendall(cmds.encode('utf-8'))
+                    data = s.recv(1024)
+                    print(f"Answer set split op: {data!r}", file=debugfile)
                     time.sleep(0.2)
 
                     #set VFOA
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
                     s.sendall(cmds.encode('utf-8'))
+                    data = s.recv(1024)
+                    print(f"Answer set VFO-A: {data!r}", file=debugfile)
                     time.sleep(0.2)
 
                     if self.my_satellite.downmode == "FM" or self.my_satellite.downmode == "FMN":
                         #set VFOA to FM mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x05\\0x01\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set FM: {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.downmode ==  "USB":
                         #set VFOA to USB mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set USB: {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.downmode == "DATA-USB":
                         #set VFOA to USB mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x01\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set USB (1/2): {data!r}", file=debugfile)
                         time.sleep(0.2)     
                         #set VFOA to DATA mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x06\\0x01\\0x02\\0xFD 14\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set VFO-A Data (2/2): {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.downmode == "CW":
                         #set VFOA to CW mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x03\\0x02\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set CW: {data!r}", file=debugfile)
                         time.sleep(0.2)
                     else:
                         print("*** Downlink mode not implemented yet: {bad}".format(bad=self.my_satellite.downmode))
@@ -461,44 +481,62 @@ class MainWindow(QMainWindow):
                     # set initial RX freq
                     F_string = "F {RXF:.0f}\n".format(RXF=self.my_satellite.F_init)
                     s.send(bytes(F_string, 'ascii'))
+                    data = s.recv(1024)
+                    print(f"Answer set initial RX freq: {data!r}", file=debugfile)
 
                     #set VFOB
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x01\\0xFD 10\n"
                     s.sendall(cmds.encode('utf-8'))
+                    data = s.recv(1024)
+                    print(f"Answer set VFO-B: {data!r}", file=debugfile)
                     time.sleep(0.2)
 
                     if self.my_satellite.upmode == "FM" or self.my_satellite.upmode == "FMN":
                         #set VFOB to FM mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x05\\0x01\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set FM: {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.upmode == "LSB":
                         #set VFOB to LSB mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x00\\0x02\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set LSB: {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.upmode == "DATA-USB":
                         #set VFOB to LSB mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x01\\0x02\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set USB (1/2): {data!r}", file=debugfile)
                         time.sleep(0.2)     
                         #set VFOB to DATA mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x06\\0x01\\0x02\\0xFD 14\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set VFO-A Data (2/2): {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.upmode == "DATA-LSB":
                         #set VFOB to LSB mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x00\\0x02\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set LSB (1/2): {data!r}", file=debugfile)
                         time.sleep(0.2)     
                         #set VFOB to DATA mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x1A\\0x06\\0x01\\0x02\\0xFD 14\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set VFO-A Data (2/2): {data!r}", file=debugfile)
                         time.sleep(0.2)
                     elif self.my_satellite.upmode == "CW":
                         #set VFOB to CW mode
                         cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x06\\0x03\\0x02\\0xFD 12\n"
                         s.sendall(cmds.encode('utf-8'))
+                        data = s.recv(1024)
+                        print(f"Answer set CW: {data!r}", file=debugfile)
                         time.sleep(0.2)
                     else:
                         print("*** Uplink mode not implemented yet: {bad}".format(bad=self.my_satellite.upmode))
@@ -507,10 +545,14 @@ class MainWindow(QMainWindow):
                     # set initial TX freq
                     I_string = "F {TXF:.0f}\n".format(TXF=self.my_satellite.I_init)
                     s.send(bytes(I_string, 'ascii'))
+                    data = s.recv(1024)
+                    print(f"Answer set initial RX freq: {data!r}", file=debugfile)
 
                     #return to VFOA
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE0\\0x07\\0x00\\0xFD 10\n"
                     s.sendall(cmds.encode('utf-8'))
+                    data = s.recv(1024)
+                    print(f"Answer set VFO-A: {data!r}", file=debugfile)
                     time.sleep(0.2)
 
                 F0 = self.my_satellite.F + f_cal
@@ -528,6 +570,8 @@ class MainWindow(QMainWindow):
                         rx_doppler = new_rx_doppler
                         F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
                         s.send(bytes(F_string, 'ascii'))
+                        data = s.recv(1024)
+                        print(f"Answer set F: {data!r}", file=debugfile)
                         self.my_satellite.F = rx_doppler
                     
                     new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
@@ -535,9 +579,13 @@ class MainWindow(QMainWindow):
                         tx_doppler = new_tx_doppler
                         I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
                         s.send(bytes(I_string, 'ascii'))
+                        data = s.recv(1024)
+                        print(f"Answer set I: {data!r}", file=debugfile)
                         self.my_satellite.I = tx_doppler
 
                     time.sleep(1)
+                
+                f.close()
 
         except socket.error:
             print("Failed to connect to Rigctld on {addr}:{port}.".format(addr=ADDRESS,port=PORT))
