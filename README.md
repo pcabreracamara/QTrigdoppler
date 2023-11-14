@@ -28,7 +28,7 @@ Support files and download links:
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
 ## v0.3 Limitations:
-    1) CV-I commands supports Icom 9700, 705 and Yaesu 818 radios.
+    1) Hamlib and/or CV-I commands tested on Icom 9700, 705 and Yaesu 818 radios.
     2) No "Menus" driven configuration, "config.ini" file for this.
     3) 705 and 818 only in split mode operation (half-duplex).
     ### v0.3 ToDo List:
