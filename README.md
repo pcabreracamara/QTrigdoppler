@@ -28,7 +28,7 @@ Support files and download links:
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
 ## v0.3 Limitations:
-    1) CV-I commands supports both Icom 9700 and 705 radios.
+    1) CV-I commands supports Icom 9700, 705 and Yaesu 818 radios.
     2) The various SSB,CW,FM,AM modulations are not automatically processed for the 9700 radio, only USB-Data is used as the program has been tested with the GreenCube (for the time being).
     3) Important for SSB phone satellites: changes in the VFOs frequencies of the radio is not taken into account at the moment, only the frequency of the doppler.sqf file is taken into account for the doppler calculation (manual changes are not taken into account). 
     ### v0.3 ToDo List:
@@ -50,8 +50,9 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 
         ;Icom radio model and CV-I address
         [icom]
-        ; Acepted models are 705 or 9700
+        ; Acepted models are Icom 705, 9700 or Yaesu 818
         radio = 705
+        ; Only for Icom rigs, configure your CV-I address:
         cviaddress = A4
   
 ## Execute script with Hamlib:  
@@ -60,10 +61,12 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
       Unix/Linux:
       Icom 9700: rigctld -m 3081 -r /dev/YOUR_DEVICE -s 115200 -T 127.0.0.1
       Icom 705: rigctld -m 3085 -r /dev/YOUR_DEVICE -c 0xA4 -s 57600 -T 127.0.0.1
+      Yaesu 818: rigctld -m 1041 -r /dev/YOUR_DEVICE -T 127.0.0.1
 
       Windows:
-      Icom 9700: rigctld -m 3081 -r COMx -s 115200 -T 127.0.0.1
-      Icom 705: rigctld -m 3085 -r COMx -c 0xA4 -s 57600 -T 127.0.0.1
+      Icom 9700: rigctld.exe -m 3081 -r COMx -s 115200 -T 127.0.0.1
+      Icom 705: rigctld.exe -m 3085 -r COMx -c 0xA4 -s 57600 -T 127.0.0.1
+      Yaesu 818: rigctld.exe -m 1041 -r COMx -T 127.0.0.1
 
     2) Check *config.ini* file and review all parameters, but really those are very important to review:  
         QTH coordinates: latitude, longitude and altitude 
