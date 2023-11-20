@@ -272,12 +272,12 @@ class ConfigWindow(QMainWindow):
 
         # 1x Label CVI address
         self.radicvi_lbl = QLabel("CVI address:")
-        satellite_layout.addWidget(self.radicvi_lbl)
+        radio_layout.addWidget(self.radicvi_lbl)
 
         self.radicvi = QLineEdit()
         self.radicvi.setMaxLength(2)
         self.radicvi.setText(CVIADDR)
-        satellite_layout.addWidget(self.radicvi)
+        radio_layout.addWidget(self.radicvi)
 
         ### HamLib
         self.haml = QLabel("HamLib Parameters")
