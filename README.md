@@ -29,31 +29,45 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 
 ## v0.3 Limitations:
     1) Hamlib and/or CV-I commands tested on Icom 9700, 705 and Yaesu 818 radios.
-    2) No "Menus" driven configuration, "config.ini" file for this.
-    3) 705 and 818 only in split mode operation (half-duplex).
+    2) 705 and 818 only in split mode operation (half-duplex).
     ### v0.3 ToDo List:
     1) Improve error handling, detect and correct bugs. 
     2) Solve the limitations.
     3) Let me know if you have something else in mind.
     
 ## Basic Configuration:
-    1) Edit *config.ini* file and set your coordinates and altitude in [qth] section:
+<picture>
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/pcabreracamara/QTrigdoppler/blob/main/images/menu_config.png">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/pcabreracamara/QTrigdoppler/blob/main/images/menu_config.png">
+ <img alt="Shows the GUI for editing config." src="https://github.com/pcabreracamara/QTrigdoppler/blob/main/images/menu_config.png">
+</picture>  
+    1) "Setup" menu, "Edit setup" item to review and change the parameters:. QTH Parameters
     
-        ;rigdoppler configuration file
-        [qth]
-        ;station location
-        latitude = 48.188
-        longitude = -5.708
-        altitude = 70
+    - Coordinates and altitude in Qth section.
+    - Step for RX and TX in Hertz.
 
-    2) Set your radio, 9700 or 705. Optionally set the CV-I address:
+    Satellite parameters:
+    Support files used to get satellites frequencies and ephemerides:
 
-        ;Icom radio model and CV-I address
-        [icom]
-        ; Acepted models are Icom 705, 9700 or Yaesu 818
-        radio = 705
-        ; Only for Icom rigs, configure your CV-I address:
-        cviaddress = A4
+    - tle_file must contains ephemerides two line elements to calculate satellite passes over the coordinates in the [qth] section.
+    - sqffile must contains satellites' frequencies (both downlink and uplink), following the same format as the original PCSat32 file.
+    - amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could be correlated with common satellites names used in doppler.sf file. Three columns per each satellite will list NORAD_ID identifier and common satellite name.
+
+    Radio Parameters:
+    - Setup your radio: Icom 9700, 705 or Yaesu 818
+    - In case of Icom radio, setup your radio CV-I address
+
+    Hamlib parameters:
+    - IP address and TCP port used for communicate with "rigctl" daemon
+
+    Offset Profiles:
+    - Offsets will be automatically loaded when selecting the satellite. Format is the following:
+        - Label "satoffset" followed by incremental number and the symbol "=", per each profile: satoffset1=, satoffset2=, satoffset3=, etc.
+        - Satellite name, as found in doppler.sqf file, followed by ":" and
+        - RX offset (Hertz) and TX offset, separated by comma ","
+
+        Exmaple: satoffset1 = IO-117:-750,-750
+
   
 ## Execute script with Hamlib:  
     1) Open TCP connection from your computer to Icom rig using HamLib *rigctld* command:
@@ -71,40 +85,7 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
     2) Check *config.ini* file and review all parameters, but really those are very important to review:  
         QTH coordinates: latitude, longitude and altitude 
         
-    3) Execute RigDoppler: python3 /path/to/QTrigdoppler.py
-
-## Advanced Configuration:
-    1) Support files used to get satellites frequencies and ephemerides data can be modified in the *config.ini* file:
-    
-        [satellite]
-        ;path to your TLE file
-        tle_file = mykepler.txt
-        tle_url = http://tle.pe0sat.nl/kepler/mykepler.txt
-        ;path to AmsatNames file
-        amsatnames = AmsatNames.txt
-        ;path to dopler.sqf file
-        sqffile = doppler.sqf
-
-tle_file must contains ephemerides two line elements to calculate satellite passes over the coordinates in the [qth] section.
-
-sqffile must contains satellites' frequencies (both downlink and uplink), following the same format as the original PCSat32 file.
-
-amsatnames is just an auxiliary file son NORAD_ID satellites identifiers could be correlated with common satellites names used in doppler.sf file. Three columns per each satellite will list NORAD_ID identifier and common satellite name.
-
-    2) Hamlib default configuration can be modified in it's section:
-        
-        [hamlib]
-        address = localhost
-        port = 4532
-
-    3) User defined RX and TX offsets values per satellite can de added in the [offset_profiles] section. 
-        
-        Format is the following:
-        - Label "satoffset" followed by incremental number and the symbol "=", per each profile: satoffset1=, satoffset2=, satoffset3=, etc.
-        - Satellite name, as found in doppler.sqf file, followed by ":" and
-        - RX offset (Hertz) and TX offset, separated by comma ","
-
-        Exmaple: satoffset1 = IO-117:-750,-750
+    3) Execute RigDoppler: python3 /path/to/QTrigdoppler.py        
         
 ## Field Tests:
 
