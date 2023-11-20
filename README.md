@@ -28,9 +28,9 @@ Support files and download links:
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
 ## v0.3 Limitations:
-    1) CV-I commands supports Icom 9700, 705 and Yaesu 818 radios.
-    2) The various SSB,CW,FM,AM modulations are not automatically processed for the 9700 radio, only USB-Data is used as the program has been tested with the GreenCube (for the time being).
-    3) Important for SSB phone satellites: changes in the VFOs frequencies of the radio is not taken into account at the moment, only the frequency of the doppler.sqf file is taken into account for the doppler calculation (manual changes are not taken into account). 
+    1) Hamlib and/or CV-I commands tested on Icom 9700, 705 and Yaesu 818 radios.
+    2) No "Menus" driven configuration, "config.ini" file for this.
+    3) 705 and 818 only in split mode operation (half-duplex).
     ### v0.3 ToDo List:
     1) Improve error handling, detect and correct bugs. 
     2) Solve the limitations.
