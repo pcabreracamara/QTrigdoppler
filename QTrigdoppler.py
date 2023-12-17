@@ -66,6 +66,8 @@ LONGITUDE = configur.getfloat('qth','longitude')
 ALTITUDE = configur.getfloat('qth','altitude')
 STEP_RX = configur.getint('qth','step_rx')
 STEP_TX = configur.getint('qth','step_tx')
+MAX_OFFSET_RX = configur.getint('qth','max_offset_rx')
+MAX_OFFSET_TX = configur.getint('qth','max_offset_tx')
 TLEFILE = configur.get('satellite','tle_file')
 TLEURL = configur.get('satellite','tle_url')
 SATNAMES = configur.get('satellite','amsatnames')
@@ -128,6 +130,8 @@ class ConfigWindow(QMainWindow):
         global ALTITUDE
         global STEP_RX
         global STEP_TX
+        global MAX_OFFSET_RX
+        global MAX_OFFSET_TX
 
         # satellite
         global TLEFILE
@@ -178,15 +182,6 @@ class ConfigWindow(QMainWindow):
         self.qth = QLabel("QTH Parameters")
         self.qth.setFont(myFont)
         qth_layout.addWidget(self.qth)
-        # 1x Label Longitude
-        self.qthlong_lbl = QLabel("QTH longitude:")
-        qth_layout.addWidget(self.qthlong_lbl)
-
-        self.qthlong = QLineEdit()
-        self.qthlong.setMaxLength(10)
-        self.qthlong.setEchoMode(QLineEdit.Normal)
-        self.qthlong.setText(str(LONGITUDE))
-        qth_layout.addWidget(self.qthlong)
         
         # 1x Label latitude
         self.qthlat_lbl = QLabel("QTH latitude:")
@@ -196,6 +191,16 @@ class ConfigWindow(QMainWindow):
         self.qthlat.setMaxLength(10)
         self.qthlat.setText(str(LATITUDE))
         qth_layout.addWidget(self.qthlat)
+
+        # 1x Label Longitude
+        self.qthlong_lbl = QLabel("QTH longitude:")
+        qth_layout.addWidget(self.qthlong_lbl)
+
+        self.qthlong = QLineEdit()
+        self.qthlong.setMaxLength(10)
+        self.qthlong.setEchoMode(QLineEdit.Normal)
+        self.qthlong.setText(str(LONGITUDE))
+        qth_layout.addWidget(self.qthlong)
 
         # 1x Label altitude
         self.qthalt_lbl = QLabel("QTH altitude:")
@@ -223,6 +228,24 @@ class ConfigWindow(QMainWindow):
         self.qthsteptx.setMaxLength(10)
         self.qthsteptx.setText(str(STEP_TX))
         qth_layout.addWidget(self.qthsteptx)
+
+        # 1x Label Max Offset RX
+        self.qthmaxoffrx_lbl = QLabel("Max Offset (Hz) for RX:")
+        qth_layout.addWidget(self.qthmaxoffrx_lbl)
+
+        self.qthmaxoffrx = QLineEdit()
+        self.qthmaxoffrx.setMaxLength(6)
+        self.qthmaxoffrx.setText(str(MAX_OFFSET_RX))
+        qth_layout.addWidget(self.qthmaxoffrx)
+
+        # 1x Label Max Offset TX
+        self.qthmaxofftx_lbl = QLabel("Max Offset (Hz) for TX:")
+        qth_layout.addWidget(self.qthmaxofftx_lbl)
+
+        self.qthmaxofftx = QLineEdit()
+        self.qthmaxofftx.setMaxLength(6)
+        self.qthmaxofftx.setText(str(MAX_OFFSET_TX))
+        qth_layout.addWidget(self.qthmaxofftx)
 
         ### Satellite
         self.sat = QLabel("Satellite Parameters")
@@ -403,6 +426,8 @@ class ConfigWindow(QMainWindow):
         global ALTITUDE
         global STEP_RX
         global STEP_TX
+        global MAX_OFFSET_TX
+        global MAX_OFFSET_RX
 
         # satellite
         global TLEFILE
@@ -430,6 +455,10 @@ class ConfigWindow(QMainWindow):
         configur['qth']['step_rx'] = str(int(self.qthsteprx.displayText()))
         STEP_TX = int(self.qthsteptx.displayText())
         configur['qth']['step_tx'] = str(int(self.qthsteptx.displayText()))
+        MAX_OFFSET_RX = int(self.qthmaxoffrx.displayText())
+        configur['qth']['max_offset_rx'] = str(int(self.qthmaxoffrx.displayText()))
+        MAX_OFFSET_TX = int(self.qthmaxoffrx.displayText())
+        configur['qth']['max_offset_tx'] = str(int(self.qthmaxoffrx.displayText()))
         TLEFILE = configur['satellite']['tle_file'] = str(self.sattle.displayText())
         TLEURL =  configur['satellite']['tle_url'] = str(self.sattleurl.displayText())
         SATNAMES = configur['satellite']['amsatnames'] = str(self.satsatnames.displayText())
@@ -517,6 +546,7 @@ class MainWindow(QMainWindow):
         satlist=list(dict.fromkeys(satlist))  
         self.combo1.addItems(['Select one...'])
         self.combo1.addItems(satlist)
+        self.combo1.currentTextChanged.connect(self.sat_changed) 
         combo_layout.addWidget(self.combo1)
 
         myFont=QFont()
@@ -524,21 +554,33 @@ class MainWindow(QMainWindow):
 
         # 1x Label: RX freq
         self.rxfreqtitle = QLabel("RX freq:")
+        self.rxfreqtitle.setFont(myFont)
         labels_layout.addWidget(self.rxfreqtitle)
 
         self.rxfreq = QLabel("0.0")
         self.rxfreq.setFont(myFont)
         labels_layout.addWidget(self.rxfreq)
+
+        # 1x Label: RX freq Satellite
+        self.rxfreqsat_lbl = QLabel("RX freq on Sat:")
+        labels_layout.addWidget(self.rxfreqsat_lbl)
+
         self.rxfreq_onsat = QLabel("0.0")
         labels_layout.addWidget(self.rxfreq_onsat)
 
         # 1x Label: TX freq
         self.txfreqtitle = QLabel("TX freq:")
+        self.txfreqtitle.setFont(myFont)
         labels_layout.addWidget(self.txfreqtitle)
 
         self.txfreq = QLabel("0.0")
         self.txfreq.setFont(myFont)
         labels_layout.addWidget(self.txfreq)
+
+        # 1x Label: TX freq Satellite
+        self.txfreqsat_lbl = QLabel("TX freq on Sat:")
+        labels_layout.addWidget(self.txfreqsat_lbl)
+
         self.txfreq_onsat = QLabel("0.0")
         labels_layout.addWidget(self.txfreq_onsat)
 
@@ -548,8 +590,8 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (RX offset)
         self.rxoffsetbox = QSpinBox()
-        self.rxoffsetbox.setMinimum(-1500)
-        self.rxoffsetbox.setMaximum(1500)
+        self.rxoffsetbox.setMinimum(-MAX_OFFSET_RX)
+        self.rxoffsetbox.setMaximum(MAX_OFFSET_RX)
         self.rxoffsetbox.setSingleStep(int(STEP_RX))
         self.rxoffsetbox.valueChanged.connect(self.rxoffset_value_changed)
         offset_layout.addWidget(self.rxoffsetbox)
@@ -560,8 +602,8 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (TX offset)
         self.txoffsetbox = QSpinBox()
-        self.txoffsetbox.setMinimum(-1500)
-        self.txoffsetbox.setMaximum(1500)
+        self.txoffsetbox.setMinimum(-MAX_OFFSET_TX)
+        self.txoffsetbox.setMaximum(MAX_OFFSET_TX)
         self.txoffsetbox.setSingleStep(int(STEP_TX))
         self.txoffsetbox.valueChanged.connect(self.txoffset_value_changed)
         offset_layout.addWidget(self.txoffsetbox)
@@ -574,7 +616,6 @@ class MainWindow(QMainWindow):
         # 1x QPushButton (Start)
         self.Startbutton = QPushButton("Start")
         self.Startbutton.clicked.connect(self.init_worker)
-        self.combo1.currentTextChanged.connect(self.text_changed) 
         button_layout.addWidget(self.Startbutton)
 
         # 1x QPushButton (Stop)
@@ -637,11 +678,14 @@ class MainWindow(QMainWindow):
             I0 = self.my_satellite.I_init + i_cal
             self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
-    def text_changed(self, satname):
+    def sat_changed(self, satname):
         global F0
         global I0
         global f_cal
         global i_cal
+        global MAX_OFFSET_RX
+        global MAX_OFFSET_TX
+
         self.LogText.clear()
         #   EA4HCF: Let's use PCSat32 translation from NoradID to Sat names, boring but useful for next step.
         #   From NORAD_ID identifier, will get the SatName to search satellite frequencies in dopler file in next step.
@@ -684,8 +728,24 @@ class MainWindow(QMainWindow):
             raise MyError()
 
         if satname in useroffsets:
-            self.rxoffsetbox.setValue(int(useroffsets[satname].split(',')[0]))
-            self.txoffsetbox.setValue(int(useroffsets[satname].split(',')[1]))
+            usrrxoffset=int(useroffsets[satname].split(',')[0])
+            usrtxoffset=int(useroffsets[satname].split(',')[1])
+
+            if usrrxoffset < MAX_OFFSET_RX and usrrxoffset > -MAX_OFFSET_RX:
+                self.rxoffsetbox.setMaximum(MAX_OFFSET_RX)
+                self.rxoffsetbox.setMinimum(-MAX_OFFSET_RX)
+                self.rxoffsetbox.setValue(usrrxoffset)
+            else:
+                self.LogText.append("***  ERROR: Max RX offset ({max}) not align with user offset: {value}.".format(value=usrrxoffset,max =MAX_OFFSET_RX))
+                self.rxoffsetbox.setValue(0)
+            
+            if usrtxoffset < MAX_OFFSET_TX and usrtxoffset > -MAX_OFFSET_TX:
+                self.txoffsetbox.setMaximum(MAX_OFFSET_TX)
+                self.txoffsetbox.setMinimum(-MAX_OFFSET_TX)
+                self.txoffsetbox.setValue(usrtxoffset)
+            else:
+                self.LogText.append("***  ERROR: Max TX offset ({max}) not align with user offset: {value}.".format(value=usrtxoffset,max=MAX_OFFSET_TX))
+                self.txoffsetbox.setValue(0)
         else:
             self.rxoffsetbox.setValue(0)
             self.txoffsetbox.setValue(0)
