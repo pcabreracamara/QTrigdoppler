@@ -29,7 +29,6 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 
 ## v0.3 Limitations:
     1) Hamlib and/or CV-I commands tested on Icom 9700, 705 and Yaesu 818 radios.
-    2) 705 and 818 only in split mode operation (half-duplex).
     ### v0.3 ToDo List:
     1) Improve error handling, detect and correct bugs. 
     2) Solve the limitations.
@@ -43,8 +42,9 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 </picture>  
     1) "Setup" menu, "Edit setup" item to review and change the parameters:. QTH Parameters
     
-    - Coordinates and altitude in Qth section.
-    - Step for RX and TX in Hertz.
+    - Latitude, Longitude and altitude.
+    - Step for RX and TX offset sliders (Hertz units).
+    - Maximun and minimun values for RX and TX offset sliders (Hertz units).
 
     Satellite parameters:
     Support files used to get satellites frequencies and ephemerides:
@@ -97,7 +97,7 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
 ## GreenCube Operation with Icom 705
 
   1) Operate antenna untill receivinf the bursts in the 705 waterfall.
-  2) Adjust RX offset until bursts should be centered in both the 705 waterfall and in the "soundmodem" waterfall, between 1000 and 2000
+  2) Adjust RX offset until bursts should be centered in both the 705 waterfall and in the "soundmodem" waterfall, between 1000 and 2000 (only when the sallite is operating at 1200 bauds)
   3) Copy and paste the RX offset value from the RX input field to TX (both must be equal)
   4) Start transmitting and enjoy the melody
 

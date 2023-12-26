@@ -64,16 +64,26 @@ except IOError:
 LATITUDE = configur.get('qth','latitude')
 LONGITUDE = configur.get('qth','longitude')
 ALTITUDE = configur.getfloat('qth','altitude')
-STEP_RX = configur.get('qth','step_rx')
-STEP_TX = configur.get('qth','step_tx')
+STEP_RX = configur.getint('qth','step_rx')
+STEP_TX = configur.getint('qth','step_tx')
+MAX_OFFSET_RX = configur.getint('qth','max_offset_rx')
+MAX_OFFSET_TX = configur.getint('qth','max_offset_tx')
 TLEFILE = configur.get('satellite','tle_file')
 TLEURL = configur.get('satellite','tle_url')
 SATNAMES = configur.get('satellite','amsatnames')
 SQFILE = configur.get('satellite','sqffile')
 RADIO = configur.get('icom','radio')
 CVIADDR = configur.get('icom','cviaddress')
+if configur.get('icom', 'fullmode') == "True":
+    OPMODE = True
+elif configur.get('icom', 'fullmode') == "False":
+    OPMODE = False
 ADDRESS = configur.get('hamlib','address')
 PORT = configur.getint('hamlib','port')
+if configur.has_option('hamlib','portfull'):
+    PORTFULL = configur.getint('hamlib','portfull')
+else:
+    PORTFULL = 5434
 
 useroffsets = {}
 
@@ -120,6 +130,8 @@ class ConfigWindow(QMainWindow):
         global ALTITUDE
         global STEP_RX
         global STEP_TX
+        global MAX_OFFSET_RX
+        global MAX_OFFSET_TX
 
         # satellite
         global TLEFILE
@@ -130,10 +142,12 @@ class ConfigWindow(QMainWindow):
         # Radio
         global RADIO
         global CVIADDR
+        global OPMODE
 
         # Hamlib
         global ADDRESS
         global PORT
+        global PORTFULL
 
         myFont=QFont()
         myFont.setBold(True)
@@ -141,7 +155,7 @@ class ConfigWindow(QMainWindow):
         pagelayout = QVBoxLayout()
 
         uplayout = QHBoxLayout()
-        mediumlayout = QVBoxLayout()
+        mediumlayout = QHBoxLayout()
         downlayout = QHBoxLayout()
 
         pagelayout.addLayout(uplayout)
@@ -153,6 +167,7 @@ class ConfigWindow(QMainWindow):
         radio_layout = QVBoxLayout()
         hamlib_layout = QVBoxLayout()
         offset_layout = QVBoxLayout()
+        buttons_layout = QVBoxLayout()
 
         uplayout.addLayout(qth_layout)
         uplayout.addLayout(satellite_layout)
@@ -161,20 +176,12 @@ class ConfigWindow(QMainWindow):
         mediumlayout.addLayout(hamlib_layout)
 
         downlayout.addLayout(offset_layout)
+        downlayout.addLayout(buttons_layout)
 
         ### QTH
         self.qth = QLabel("QTH Parameters")
         self.qth.setFont(myFont)
         qth_layout.addWidget(self.qth)
-        # 1x Label Longitude
-        self.qthlong_lbl = QLabel("QTH longitude:")
-        qth_layout.addWidget(self.qthlong_lbl)
-
-        self.qthlong = QLineEdit()
-        self.qthlong.setMaxLength(10)
-        self.qthlong.setEchoMode(QLineEdit.Normal)
-        self.qthlong.setText(LONGITUDE)
-        qth_layout.addWidget(self.qthlong)
         
         # 1x Label latitude
         self.qthlat_lbl = QLabel("QTH latitude:")
@@ -182,8 +189,18 @@ class ConfigWindow(QMainWindow):
 
         self.qthlat = QLineEdit()
         self.qthlat.setMaxLength(10)
-        self.qthlat.setText(LATITUDE)
+        self.qthlat.setText(str(LATITUDE))
         qth_layout.addWidget(self.qthlat)
+
+        # 1x Label Longitude
+        self.qthlong_lbl = QLabel("QTH longitude:")
+        qth_layout.addWidget(self.qthlong_lbl)
+
+        self.qthlong = QLineEdit()
+        self.qthlong.setMaxLength(10)
+        self.qthlong.setEchoMode(QLineEdit.Normal)
+        self.qthlong.setText(str(LONGITUDE))
+        qth_layout.addWidget(self.qthlong)
 
         # 1x Label altitude
         self.qthalt_lbl = QLabel("QTH altitude:")
@@ -200,7 +217,7 @@ class ConfigWindow(QMainWindow):
 
         self.qthsteprx = QLineEdit()
         self.qthsteprx.setMaxLength(10)
-        self.qthsteprx.setText(STEP_RX)
+        self.qthsteprx.setText(str(STEP_RX))
         qth_layout.addWidget(self.qthsteprx)
 
         # 1x Label step TX
@@ -209,8 +226,26 @@ class ConfigWindow(QMainWindow):
 
         self.qthsteptx = QLineEdit()
         self.qthsteptx.setMaxLength(10)
-        self.qthsteptx.setText(STEP_TX)
+        self.qthsteptx.setText(str(STEP_TX))
         qth_layout.addWidget(self.qthsteptx)
+
+        # 1x Label Max Offset RX
+        self.qthmaxoffrx_lbl = QLabel("Max Offset (Hz) for RX:")
+        qth_layout.addWidget(self.qthmaxoffrx_lbl)
+
+        self.qthmaxoffrx = QLineEdit()
+        self.qthmaxoffrx.setMaxLength(6)
+        self.qthmaxoffrx.setText(str(MAX_OFFSET_RX))
+        qth_layout.addWidget(self.qthmaxoffrx)
+
+        # 1x Label Max Offset TX
+        self.qthmaxofftx_lbl = QLabel("Max Offset (Hz) for TX:")
+        qth_layout.addWidget(self.qthmaxofftx_lbl)
+
+        self.qthmaxofftx = QLineEdit()
+        self.qthmaxofftx.setMaxLength(6)
+        self.qthmaxofftx.setText(str(MAX_OFFSET_TX))
+        qth_layout.addWidget(self.qthmaxofftx)
 
         ### Satellite
         self.sat = QLabel("Satellite Parameters")
@@ -254,8 +289,14 @@ class ConfigWindow(QMainWindow):
 
         ### RADIO
         self.radio = QLabel("Radio Parameters")
+        self.radio.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.radio.setFont(myFont)
         radio_layout.addWidget(self.radio)
+
+        # 1x Label CVI address
+        self.radiolist_lbl = QLabel("Select radio:")
+        self.radiolist_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        radio_layout.addWidget(self.radiolist_lbl)
 
         # 1x Select manufacturer
         self.radiolistcomb = QComboBox()
@@ -272,44 +313,82 @@ class ConfigWindow(QMainWindow):
 
         # 1x Label CVI address
         self.radicvi_lbl = QLabel("CVI address:")
+        self.radicvi_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         radio_layout.addWidget(self.radicvi_lbl)
 
         self.radicvi = QLineEdit()
+        self.radicvi.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.radicvi.setMaxLength(2)
         self.radicvi.setText(CVIADDR)
         radio_layout.addWidget(self.radicvi)
 
+        # 1x Label Duplex mode
+        self.radidplx_lbl = QLabel("Duplex mode:")
+        self.radidplx_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        radio_layout.addWidget(self.radidplx_lbl)
+
+        self.radidplx = QCheckBox()
+        if OPMODE == False:
+            self.radidplx.setChecked(False)
+        elif OPMODE == True:
+            self.radidplx.setChecked(True)
+        self.radidplx.setText("Full Duplex Operation for 705/818")
+        self.radidplx.stateChanged.connect(self.opmode_change)
+        radio_layout.addWidget(self.radidplx)
+
         ### HamLib
         self.haml = QLabel("HamLib Parameters")
+        self.haml.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.haml.setFont(myFont)
         hamlib_layout.addWidget(self.haml)
 
         # 1x Label address address
         self.hamladd_lbl = QLabel("HamLib IP address:")
+        self.hamladd_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         hamlib_layout.addWidget(self.hamladd_lbl)
 
         self.hamladd = QLineEdit()
+        self.hamladd.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.hamladd.setMaxLength(30)
         self.hamladd.setText(ADDRESS)
         hamlib_layout.addWidget(self.hamladd)
 
         # 1x Label port address
         self.hamlport_lbl = QLabel("HamLib TCP port:")
+        self.hamlport_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         hamlib_layout.addWidget(self.hamlport_lbl)
 
         self.hamlport = QLineEdit()
+        self.hamlport.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.hamlport.setMaxLength(5)
         self.hamlport.setText(str(PORT))
         hamlib_layout.addWidget(self.hamlport)
 
+        # 1x Label second port address
+        self.hamlport2_lbl = QLabel("HamLib second TCP port:")
+        self.hamlport2_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        hamlib_layout.addWidget(self.hamlport2_lbl)
+
+        self.hamlport2 = QLineEdit()
+        self.hamlport2.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.hamlport2.setMaxLength(5)
+        self.hamlport2.setText(str(PORTFULL))
+        if OPMODE == False:
+            self.hamlport2.setEnabled(False)
+        elif OPMODE == True:
+            self.hamlport2.setEnabled(True)
+        hamlib_layout.addWidget(self.hamlport2)
+
         ### Offset profiles
         self.offsets = QLabel("Offsets Profiles")
+        self.offsets.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.offsets.setFont(myFont)
         offset_layout.addWidget(self.offsets)
 
         self.offsetText = QTextEdit()
         self.offsetText.setReadOnly(False)
         self.offsetText.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.offsetText.setStyleSheet("background-color: black; color: white;")
         offset_layout.addWidget(self.offsetText)
 
         for (each_key, each_val) in configur.items('offset_profiles'):
@@ -318,22 +397,22 @@ class ConfigWindow(QMainWindow):
         # Save Label
         self.savebutontitle = QLabel("Save configuration")
         self.savebutontitle.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        offset_layout.addWidget(self.savebutontitle)
+        buttons_layout.addWidget(self.savebutontitle)
 
         # 1x QPushButton (Save)
         self.Savebutton = QPushButton("Save")
         self.Savebutton.clicked.connect(self.save_config)
-        offset_layout.addWidget(self.Savebutton)
+        buttons_layout.addWidget(self.Savebutton)
 
         # Exit Label
         self.exitbutontitle = QLabel("Exit configuration")
         self.exitbutontitle.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        offset_layout.addWidget(self.exitbutontitle)
+        buttons_layout.addWidget(self.exitbutontitle)
 
         # 1x QPushButton (Save)
         self.Exitbutton = QPushButton("Exit")
         self.Exitbutton.clicked.connect(self.exit_config)
-        offset_layout.addWidget(self.Exitbutton)
+        buttons_layout.addWidget(self.Exitbutton)
 
         ##########################################
         container = QWidget()
@@ -341,25 +420,68 @@ class ConfigWindow(QMainWindow):
         self.setCentralWidget(container)
     
     def save_config(self):
-        LATITUDE = float(self.qthlat.displayText())
+        # QTH
+        global LATITUDE
+        global LONGITUDE
+        global ALTITUDE
+        global STEP_RX
+        global STEP_TX
+        global MAX_OFFSET_TX
+        global MAX_OFFSET_RX
+
+        # satellite
+        global TLEFILE
+        global TLEURL
+        global SATNAMES
+        global SQFILE
+
+        # Radio
+        global RADIO
+        global CVIADDR
+        global OPMODE
+
+        # Hamlib
+        global ADDRESS
+        global PORT
+        global PORTFULL
+
+        LATITUDE = self.qthlat.displayText()
         configur['qth']['latitude'] = str(float(self.qthlat.displayText()))
+        LONGITUDE = self.qthlong.displayText()
         configur['qth']['longitude'] = str(float(self.qthlong.displayText()))
+        ALTITUDE = float(self.qthalt.displayText())
         configur['qth']['altitude'] = str(float(self.qthalt.displayText()))
+        STEP_RX = int(self.qthsteprx.displayText())
         configur['qth']['step_rx'] = str(int(self.qthsteprx.displayText()))
+        STEP_TX = int(self.qthsteptx.displayText())
         configur['qth']['step_tx'] = str(int(self.qthsteptx.displayText()))
-        configur['satellite']['tle_file'] = str(self.sattle.displayText())
-        configur['satellite']['tle_url'] = str(self.sattleurl.displayText())
-        configur['satellite']['amsatnames'] = str(self.satsatnames.displayText())
-        configur['satellite']['sqffile'] = str(self.satsqf.displayText())
+        MAX_OFFSET_RX = int(self.qthmaxoffrx.displayText())
+        configur['qth']['max_offset_rx'] = str(int(self.qthmaxoffrx.displayText()))
+        MAX_OFFSET_TX = int(self.qthmaxoffrx.displayText())
+        configur['qth']['max_offset_tx'] = str(int(self.qthmaxoffrx.displayText()))
+        TLEFILE = configur['satellite']['tle_file'] = str(self.sattle.displayText())
+        TLEURL =  configur['satellite']['tle_url'] = str(self.sattleurl.displayText())
+        SATNAMES = configur['satellite']['amsatnames'] = str(self.satsatnames.displayText())
+        SQFILE = configur['satellite']['sqffile'] = str(self.satsqf.displayText())
         if self.radiolistcomb.currentText() == "Icom 9700":
-            configur['icom']['radio'] = '9700'
+            RADIO = configur['icom']['radio'] = '9700'
         elif self.radiolistcomb.currentText() == "Icom 705":
-            configur['icom']['radio'] = '705'
+            RADIO = configur['icom']['radio'] = '705'
         elif self.radiolistcomb.currentText() == "Yaesu 818":
-            configur['icom']['radio'] = '818'
-        configur['icom']['cviaddress'] = str(self.radicvi.displayText())
-        configur['hamlib']['address'] = str(self.hamladd.displayText())
+            RADIO = configur['icom']['radio'] = '818'
+
+        if self.radidplx.isChecked():
+            OPMODE = True
+            configur['icom']['fullmode'] = "True"
+            PORTFULL = configur['hamlib']['portfull'] = str(self.hamlport2.displayText())
+        else:
+            OPMODE = False
+            configur['icom']['fullmode'] = "False"
+            configur.remove_option('hamlib','portfull')
+        CVIADDR = configur['icom']['cviaddress'] = str(self.radicvi.displayText())
+        ADDRESS = configur['hamlib']['address'] = str(self.hamladd.displayText())
         configur['hamlib']['port'] = str(int(self.hamlport.displayText()))
+        PORT = int(self.hamlport.displayText())
 
         if self.offsetText.document().blockCount() >= 1:
             for i in range(0, self.offsetText.document().blockCount()):
@@ -370,6 +492,12 @@ class ConfigWindow(QMainWindow):
         with open('config.ini', 'w') as configfile:
             configur.write(configfile)
         self.close()
+
+    def opmode_change(self):
+        if self.radidplx.isChecked():
+            self.hamlport2.setEnabled(True)
+        else:
+            self.hamlport2.setEnabled(False)
 
     def exit_config(self):
         self.close()
@@ -419,6 +547,7 @@ class MainWindow(QMainWindow):
         satlist=list(dict.fromkeys(satlist))  
         self.combo1.addItems(['Select one...'])
         self.combo1.addItems(satlist)
+        self.combo1.currentTextChanged.connect(self.sat_changed) 
         combo_layout.addWidget(self.combo1)
 
         myFont=QFont()
@@ -426,21 +555,33 @@ class MainWindow(QMainWindow):
 
         # 1x Label: RX freq
         self.rxfreqtitle = QLabel("RX freq:")
+        self.rxfreqtitle.setFont(myFont)
         labels_layout.addWidget(self.rxfreqtitle)
 
         self.rxfreq = QLabel("0.0")
         self.rxfreq.setFont(myFont)
         labels_layout.addWidget(self.rxfreq)
+
+        # 1x Label: RX freq Satellite
+        self.rxfreqsat_lbl = QLabel("RX freq on Sat:")
+        labels_layout.addWidget(self.rxfreqsat_lbl)
+
         self.rxfreq_onsat = QLabel("0.0")
         labels_layout.addWidget(self.rxfreq_onsat)
 
         # 1x Label: TX freq
         self.txfreqtitle = QLabel("TX freq:")
+        self.txfreqtitle.setFont(myFont)
         labels_layout.addWidget(self.txfreqtitle)
 
         self.txfreq = QLabel("0.0")
         self.txfreq.setFont(myFont)
         labels_layout.addWidget(self.txfreq)
+
+        # 1x Label: TX freq Satellite
+        self.txfreqsat_lbl = QLabel("TX freq on Sat:")
+        labels_layout.addWidget(self.txfreqsat_lbl)
+
         self.txfreq_onsat = QLabel("0.0")
         labels_layout.addWidget(self.txfreq_onsat)
 
@@ -450,8 +591,8 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (RX offset)
         self.rxoffsetbox = QSpinBox()
-        self.rxoffsetbox.setMinimum(-1500)
-        self.rxoffsetbox.setMaximum(1500)
+        self.rxoffsetbox.setMinimum(-MAX_OFFSET_RX)
+        self.rxoffsetbox.setMaximum(MAX_OFFSET_RX)
         self.rxoffsetbox.setSingleStep(int(STEP_RX))
         self.rxoffsetbox.valueChanged.connect(self.rxoffset_value_changed)
         offset_layout.addWidget(self.rxoffsetbox)
@@ -462,8 +603,8 @@ class MainWindow(QMainWindow):
 
         # 1x QSlider (TX offset)
         self.txoffsetbox = QSpinBox()
-        self.txoffsetbox.setMinimum(-1500)
-        self.txoffsetbox.setMaximum(1500)
+        self.txoffsetbox.setMinimum(-MAX_OFFSET_TX)
+        self.txoffsetbox.setMaximum(MAX_OFFSET_TX)
         self.txoffsetbox.setSingleStep(int(STEP_TX))
         self.txoffsetbox.valueChanged.connect(self.txoffset_value_changed)
         offset_layout.addWidget(self.txoffsetbox)
@@ -476,7 +617,6 @@ class MainWindow(QMainWindow):
         # 1x QPushButton (Start)
         self.Startbutton = QPushButton("Start")
         self.Startbutton.clicked.connect(self.init_worker)
-        self.combo1.currentTextChanged.connect(self.text_changed) 
         button_layout.addWidget(self.Startbutton)
 
         # 1x QPushButton (Stop)
@@ -502,16 +642,13 @@ class MainWindow(QMainWindow):
         downlayout.addWidget(self.LogText)
 
         ## Menu
-        self.button_action = QAction("&Edit setup", self)
+        self.button_action = QAction("&Main setup", self)
         self.button_action.setStatusTip("Load and edit configuration")
         self.button_action.triggered.connect(self.setup_config)
-        self.button_action.setCheckable(True)
 
         menu = self.menuBar()
-
         self.config_menu = menu.addMenu("&Setup")
         self.config_menu.addAction(self.button_action)
-
         ## End Menu
         
         container = QWidget()
@@ -542,11 +679,14 @@ class MainWindow(QMainWindow):
             I0 = self.my_satellite.I_init + i_cal
             self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
-    def text_changed(self, satname):
+    def sat_changed(self, satname):
         global F0
         global I0
         global f_cal
         global i_cal
+        global MAX_OFFSET_RX
+        global MAX_OFFSET_TX
+
         self.LogText.clear()
         #   EA4HCF: Let's use PCSat32 translation from NoradID to Sat names, boring but useful for next step.
         #   From NORAD_ID identifier, will get the SatName to search satellite frequencies in dopler file in next step.
@@ -589,8 +729,24 @@ class MainWindow(QMainWindow):
             raise MyError()
 
         if satname in useroffsets:
-            self.rxoffsetbox.setValue(int(useroffsets[satname].split(',')[0]))
-            self.txoffsetbox.setValue(int(useroffsets[satname].split(',')[1]))
+            usrrxoffset=int(useroffsets[satname].split(',')[0])
+            usrtxoffset=int(useroffsets[satname].split(',')[1])
+
+            if usrrxoffset < MAX_OFFSET_RX and usrrxoffset > -MAX_OFFSET_RX:
+                self.rxoffsetbox.setMaximum(MAX_OFFSET_RX)
+                self.rxoffsetbox.setMinimum(-MAX_OFFSET_RX)
+                self.rxoffsetbox.setValue(usrrxoffset)
+            else:
+                self.LogText.append("***  ERROR: Max RX offset ({max}) not align with user offset: {value}.".format(value=usrrxoffset,max =MAX_OFFSET_RX))
+                self.rxoffsetbox.setValue(0)
+            
+            if usrtxoffset < MAX_OFFSET_TX and usrtxoffset > -MAX_OFFSET_TX:
+                self.txoffsetbox.setMaximum(MAX_OFFSET_TX)
+                self.txoffsetbox.setMinimum(-MAX_OFFSET_TX)
+                self.txoffsetbox.setValue(usrtxoffset)
+            else:
+                self.LogText.append("***  ERROR: Max TX offset ({max}) not align with user offset: {value}.".format(value=usrtxoffset,max=MAX_OFFSET_TX))
+                self.txoffsetbox.setValue(0)
         else:
             self.rxoffsetbox.setValue(0)
             self.txoffsetbox.setValue(0)
@@ -645,7 +801,8 @@ class MainWindow(QMainWindow):
             SEMAPHORE = True
         # Pass the function to execute
         self.LogText.append("Connected to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
-        self.LogText.append("Tracking: {sat_name}".format(sat_name=self.my_satellite.amsatname))
+        self.LogText.append("Sat TLE data {tletext}".format(tletext=self.my_satellite.tledata))
+        self.LogText.append("Tracking: {sat_name}".format(sat_name=self.my_satellite.noradid))
         self.LogText.append("Sat DownLink mode: {sat_mode_down}".format(sat_mode_down=self.my_satellite.downmode))
         self.LogText.append("Sat UpLink mode: {sat_mode_up}".format(sat_mode_up=self.my_satellite.upmode))
         self.LogText.append("Recieve Frequency (F) = {rx_freq}".format(rx_freq=self.my_satellite.F))
@@ -660,7 +817,6 @@ class MainWindow(QMainWindow):
         self.threadpool.start(worker)
 
     def calc_doppler(self, progress_callback):
-        global RADIO
         global CVIADDR
         global SEMAPHORE
         global INTERACTIVE
@@ -674,9 +830,9 @@ class MainWindow(QMainWindow):
             with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((ADDRESS, PORT))
 
-            #################################
-            #       INIT RADIOS
-            #################################
+                #################################
+                #       INIT RADIOS
+                #################################
                 if RADIO == "9700":
                     # turn off satellite mode
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x16\\0x5A\\0x00\\0xFD 14\n"
@@ -694,7 +850,7 @@ class MainWindow(QMainWindow):
                     cmds = "W \\0xFE\\0xFE\\0x" + CVIADDR + "\\0xE2\\0x27\\0x15\\0x00\\0x00\\0x50\\0x00\\0x00\\0x00\\0xFD 22\n"
                     s.sendall(cmds.encode('utf-8'))
                     time.sleep(0.2)
-                elif RADIO == "705" or "818":
+                elif ( RADIO == "705" or "818" ) and OPMODE == False:
                     #check SPLIT operation
                     F_string = "s\n"
                     s.send(bytes(F_string, 'ascii'))
@@ -736,7 +892,7 @@ class MainWindow(QMainWindow):
                     #set VFOA to USB mode
                     s.sendall(b"M USB 3000\n")
                     time.sleep(0.2)
-                elif self.my_satellite.downmode == "DATA-USB":
+                elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
                     #set VFOA to Data USB mode
                     s.sendall(b"M PKTUSB 3000\n")
                     time.sleep(0.2)     
@@ -749,42 +905,82 @@ class MainWindow(QMainWindow):
                     print("*** Downlink mode not implemented yet: {bad}".format(bad=self.my_satellite.downmode))
                     sys.exit()
                 
-                F_string = "x\n"
-                s.send(bytes(F_string, 'ascii'))
-                time.sleep(0.2)
-                data = s.recv(1024)
-                curr_mode = str(data)
-                print("Current mode VFO-B: ({a})".format(a=curr_mode))
+                if OPMODE == False:
+                    F_string = "x\n"
+                    s.send(bytes(F_string, 'ascii'))
+                    time.sleep(0.2)
+                    data = s.recv(1024)
+                    curr_mode = str(data)
+                    print("Current mode VFO-B: ({a})".format(a=curr_mode))
 
-                s.sendall(b"V VFOB\n")
-                time.sleep(0.2) 
-                if self.my_satellite.upmode == "FM":
-                    #set VFOB to FM mode
-                    s.sendall(b"X FM 15000\n")
-                    time.sleep(0.2)
-                elif self.my_satellite.upmode == "FMN":
-                    s.sendall(b"X WFM 15000\n")
-                    time.sleep(0.2)
-                elif self.my_satellite.upmode == "LSB":
-                    print("Set VFO B modulation to LSB...")
-                    #set VFOB to LSB mode
-                    s.sendall(b"X LSB 3000\n")
-                    time.sleep(0.2)
-                elif self.my_satellite.upmode == "DATA-USB":
-                    #set VFOB to USB mode
-                    s.sendall(b"X PKTUSB 2400\n")
-                    time.sleep(0.2)     
-                elif self.my_satellite.upmode == "DATA-LSB":
-                    #set VFOB to LSB mode
-                    s.sendall(b"X PKTLSB 2400\n")
-                    time.sleep(0.2)    
-                elif self.my_satellite.upmode == "CW":
-                    #set VFOB to CW mode
-                    s.sendall(b"X CW 3000\n")
-                    time.sleep(0.2)
+                    s.sendall(b"V VFOB\n")
+                    time.sleep(0.2) 
+                    if self.my_satellite.upmode == "FM":
+                        #set VFOB to FM mode
+                        s.sendall(b"X FM 15000\n")
+                        time.sleep(0.2)
+                    elif self.my_satellite.upmode == "FMN":
+                        s.sendall(b"X WFM 15000\n")
+                        time.sleep(0.2)
+                    elif self.my_satellite.upmode == "LSB":
+                        print("Set VFO B modulation to LSB...")
+                        #set VFOB to LSB mode
+                        s.sendall(b"X LSB 3000\n")
+                        time.sleep(0.2)
+                    elif (self.my_satellite.upmode == "DATA-USB" or self.my_satellite.upmode == "USB-D"):
+                        #set VFOB to USB mode
+                        s.sendall(b"X PKTUSB 2400\n")
+                        time.sleep(0.2)     
+                    elif self.my_satellite.upmode == "DATA-LSB":
+                        #set VFOB to LSB mode
+                        s.sendall(b"X PKTLSB 2400\n")
+                        time.sleep(0.2)    
+                    elif self.my_satellite.upmode == "CW":
+                        #set VFOB to CW mode
+                        s.sendall(b"X CW 3000\n")
+                        time.sleep(0.2)
+                    else:
+                        print("*** Uplink mode not implemented yet: {bad}".format(bad=self.my_satellite.upmode))
+                        sys.exit()
                 else:
-                    print("*** Uplink mode not implemented yet: {bad}".format(bad=self.my_satellite.upmode))
-                    sys.exit()
+                    with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s2:
+                        s2.connect((ADDRESS, PORT))
+                        
+                        F_string = "m\n"
+                        s2.send(bytes(F_string, 'ascii'))
+                        time.sleep(0.2)
+                        data = s2.recv(1024)
+                        curr_mode = str(data)
+                        print("Current mode VFO-A: ({a})".format(a=curr_mode))
+                        
+                        s2.sendall(b"V VFOA\n")
+                        time.sleep(0.2) 
+                        if self.my_satellite.downmode == "FM":
+                            #set VFOA to FM mode
+                            s2.sendall(b"M FM 15000\n")
+                            time.sleep(0.2)
+                        elif self.my_satellite.downmode == "FMN":
+                            #set VFOA to WFM mode
+                            s2.sendall(b"M WFM 15000\n")
+                            time.sleep(0.2)
+                        elif self.my_satellite.downmode ==  "USB":
+                            INTERACTIVE = True
+                            print("Set VFO A modulation to USB...")
+                            #set VFOA to USB mode
+                            s2.sendall(b"M USB 3000\n")
+                            time.sleep(0.2)
+                        elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
+                            #set VFOA to Data USB mode
+                            s2.sendall(b"M PKTUSB 3000\n")
+                            time.sleep(0.2)     
+                        elif self.my_satellite.downmode == "CW":
+                            INTERACTIVE = True
+                            #set VFOA to CW mode
+                            s2.sendall(b"M CW 3000\n")
+                            time.sleep(0.2)
+                        else:
+                            print("*** Downlink mode not implemented yet: {bad}".format(bad=self.my_satellite.downmode))
+                            sys.exit()
 
                 print("All config done, starting doppler...")
                 s.sendall(b"V VFOA\n")
@@ -805,7 +1001,6 @@ class MainWindow(QMainWindow):
 
                         if user_Freq > 0:
                             if abs(user_Freq - self.my_satellite.F) > 100:
-                                print("DBG: Fusuario: {kk}".format(kk=user_Freq))
                                 if user_Freq > self.my_satellite.F:
                                     delta_F = user_Freq - self.my_satellite.F
                                     if self.my_satellite.mode == "REV":
@@ -834,7 +1029,11 @@ class MainWindow(QMainWindow):
                     if new_tx_doppler != tx_doppler:
                         tx_doppler = new_tx_doppler
                         I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                        s.send(bytes(I_string, 'ascii'))
+                        if OPMODE == False:
+                            s.send(bytes(I_string, 'ascii'))
+                        else:
+                            F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                            s2.send(bytes(F2_string, 'ascii'))
                         self.my_satellite.I = tx_doppler
 
                     time.sleep(1)
