@@ -61,8 +61,8 @@ except IOError:
 
 
 # EA4HCF, params from config.ini
-LATITUDE = configur.getfloat('qth','latitude')
-LONGITUDE = configur.getfloat('qth','longitude')
+LATITUDE = configur.get('qth','latitude')
+LONGITUDE = configur.get('qth','longitude')
 ALTITUDE = configur.getfloat('qth','altitude')
 STEP_RX = configur.getint('qth','step_rx')
 STEP_TX = configur.getint('qth','step_tx')
@@ -445,9 +445,9 @@ class ConfigWindow(QMainWindow):
         global PORT
         global PORTFULL
 
-        LATITUDE = float(self.qthlat.displayText())
+        LATITUDE = self.qthlat.displayText()
         configur['qth']['latitude'] = str(float(self.qthlat.displayText()))
-        LONGITUDE = float(self.qthlong.displayText())
+        LONGITUDE = self.qthlong.displayText()
         configur['qth']['longitude'] = str(float(self.qthlong.displayText()))
         ALTITUDE = float(self.qthalt.displayText())
         configur['qth']['altitude'] = str(float(self.qthalt.displayText()))
@@ -480,7 +480,8 @@ class ConfigWindow(QMainWindow):
             configur.remove_option('hamlib','portfull')
         CVIADDR = configur['icom']['cviaddress'] = str(self.radicvi.displayText())
         ADDRESS = configur['hamlib']['address'] = str(self.hamladd.displayText())
-        PORT = configur['hamlib']['port'] = str(int(self.hamlport.displayText()))
+        configur['hamlib']['port'] = str(int(self.hamlport.displayText()))
+        PORT = int(self.hamlport.displayText())
 
         if self.offsetText.document().blockCount() >= 1:
             for i in range(0, self.offsetText.document().blockCount()):
@@ -800,7 +801,8 @@ class MainWindow(QMainWindow):
             SEMAPHORE = True
         # Pass the function to execute
         self.LogText.append("Connected to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
-        self.LogText.append("Tracking: {sat_name}".format(sat_name=self.my_satellite.amsatname))
+        self.LogText.append("Sat TLE data {tletext}".format(tletext=self.my_satellite.tledata))
+        self.LogText.append("Tracking: {sat_name}".format(sat_name=self.my_satellite.noradid))
         self.LogText.append("Sat DownLink mode: {sat_mode_down}".format(sat_mode_down=self.my_satellite.downmode))
         self.LogText.append("Sat UpLink mode: {sat_mode_up}".format(sat_mode_up=self.my_satellite.upmode))
         self.LogText.append("Recieve Frequency (F) = {rx_freq}".format(rx_freq=self.my_satellite.F))
@@ -890,7 +892,7 @@ class MainWindow(QMainWindow):
                     #set VFOA to USB mode
                     s.sendall(b"M USB 3000\n")
                     time.sleep(0.2)
-                elif self.my_satellite.downmode == "DATA-USB":
+                elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
                     #set VFOA to Data USB mode
                     s.sendall(b"M PKTUSB 3000\n")
                     time.sleep(0.2)     
@@ -925,7 +927,7 @@ class MainWindow(QMainWindow):
                         #set VFOB to LSB mode
                         s.sendall(b"X LSB 3000\n")
                         time.sleep(0.2)
-                    elif self.my_satellite.upmode == "DATA-USB":
+                    elif (self.my_satellite.upmode == "DATA-USB" or self.my_satellite.upmode == "USB-D"):
                         #set VFOB to USB mode
                         s.sendall(b"X PKTUSB 2400\n")
                         time.sleep(0.2)     
@@ -967,7 +969,7 @@ class MainWindow(QMainWindow):
                             #set VFOA to USB mode
                             s2.sendall(b"M USB 3000\n")
                             time.sleep(0.2)
-                        elif self.my_satellite.downmode == "DATA-USB":
+                        elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
                             #set VFOA to Data USB mode
                             s2.sendall(b"M PKTUSB 3000\n")
                             time.sleep(0.2)     
@@ -999,7 +1001,6 @@ class MainWindow(QMainWindow):
 
                         if user_Freq > 0:
                             if abs(user_Freq - self.my_satellite.F) > 100:
-                                print("DBG: Fusuario: {kk}".format(kk=user_Freq))
                                 if user_Freq > self.my_satellite.F:
                                     delta_F = user_Freq - self.my_satellite.F
                                     if self.my_satellite.mode == "REV":
