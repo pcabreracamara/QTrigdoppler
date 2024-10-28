@@ -49,7 +49,7 @@ def MyError():
     print("Failed to find required file!")
     sys.exit()
 
-print("QT Rigdoppler v0.3")
+print("QT Rigdoppler v0.4")
 
 try:
     with open('config.ini') as f:
@@ -70,6 +70,8 @@ MAX_OFFSET_RX = configur.getint('qth','max_offset_rx')
 MAX_OFFSET_TX = configur.getint('qth','max_offset_tx')
 TLEFILE = configur.get('satellite','tle_file')
 TLEURL = configur.get('satellite','tle_url')
+DOPPLER_THRES_FM = configur.get('satellite', 'doppler_threshold_fm')
+DOPPLER_THRES_LINEAR = configur.get('satellite', 'doppler_threshold_linear')
 SATNAMES = configur.get('satellite','amsatnames')
 SQFILE = configur.get('satellite','sqffile')
 RADIO = configur.get('icom','radio')
@@ -95,13 +97,14 @@ F0=0.0
 I0=0.0
 f_cal = 0
 i_cal = 0
+doppler_thres = 0
 
 myloc = ephem.Observer()
 myloc.lon = LONGITUDE
 myloc.lat = LATITUDE
 myloc.elevation = ALTITUDE
 
-SEMAPHORE = True
+TRACKING_ACTIVE = True 
 INTERACTIVE = False
 
 class Satellite:
@@ -132,6 +135,8 @@ class ConfigWindow(QMainWindow):
         global STEP_TX
         global MAX_OFFSET_RX
         global MAX_OFFSET_TX
+        global DOPPLER_THRES_FM
+        global DOPPLER_THRES_LINEAR
 
         # satellite
         global TLEFILE
@@ -246,6 +251,24 @@ class ConfigWindow(QMainWindow):
         self.qthmaxofftx.setMaxLength(6)
         self.qthmaxofftx.setText(str(MAX_OFFSET_TX))
         qth_layout.addWidget(self.qthmaxofftx)
+
+         # 1x Label doppler fm threshold
+        self.doppler_fm_threshold_lbl = QLabel("Doppler threshold for FM")
+        qth_layout.addWidget(self.doppler_fm_threshold_lbl, 6, 0)
+
+        self.doppler_fm_threshold = QLineEdit()
+        self.doppler_fm_threshold.setMaxLength(6)
+        self.doppler_fm_threshold.setText(str(DOPPLER_THRES_FM))
+        qth_layout.addWidget(self.doppler_fm_threshold, 6, 1)
+        
+        # 1x Label doppler linear threshold
+        self.doppler_linear_threshold_lbl = QLabel("Doppler threshold for Linear")
+        qth_layout.addWidget(self.doppler_linear_threshold_lbl, 7, 0)
+
+        self.doppler_linear_threshold = QLineEdit()
+        self.doppler_linear_threshold.setMaxLength(6)
+        self.doppler_linear_threshold.setText(str(DOPPLER_THRES_LINEAR))
+        qth_layout.addWidget(self.doppler_linear_threshold, 7, 1)
 
         ### Satellite
         self.sat = QLabel("Satellite Parameters")
@@ -428,6 +451,8 @@ class ConfigWindow(QMainWindow):
         global STEP_TX
         global MAX_OFFSET_TX
         global MAX_OFFSET_RX
+        global DOPPLER_THRES_FM
+        global DOPPLER_THRES_LINEAR
 
         # satellite
         global TLEFILE
@@ -463,6 +488,11 @@ class ConfigWindow(QMainWindow):
         TLEURL =  configur['satellite']['tle_url'] = str(self.sattleurl.displayText())
         SATNAMES = configur['satellite']['amsatnames'] = str(self.satsatnames.displayText())
         SQFILE = configur['satellite']['sqffile'] = str(self.satsqf.displayText())
+        DOPPLER_THRES_FM = int(self.doppler_fm_threshold.displayText())
+        configur['satellite']['doppler_threshold_fm'] = str(int(self.doppler_fm_threshold.displayText()))
+        DOPPLER_THRES_LINEAR = int(self.doppler_linear_threshold.displayText())
+        configur['satellite']['doppler_threshold_linear'] = str(int(self.doppler_linear_threshold.displayText()))
+
         if self.radiolistcomb.currentText() == "Icom 9700":
             RADIO = configur['icom']['radio'] = '9700'
         elif self.radiolistcomb.currentText() == "Icom 705":
@@ -788,17 +818,20 @@ class MainWindow(QMainWindow):
         sys.exit()
     
     def the_stop_button_was_clicked(self):
-        global SEMAPHORE
+        global TRACKING_ACTIVE
         global INTERACTIVE
-        SEMAPHORE = INTERACTIVE = False
+        TRACKING_ACTIVE = False
+        INTERACTIVE = False
         self.LogText.append("Stopped")
+        self.threadpool.clear()
         self.Startbutton.setEnabled(True)
     
     def init_worker(self):
-        global SEMAPHORE
+        global TRACKING_ACTIVE
 
-        if SEMAPHORE == False:
-            SEMAPHORE = True
+        if TRACKING_ACTIVE == False:
+            TRACKING_ACTIVE = True
+
         # Pass the function to execute
         self.LogText.append("Connected to Rigctld on {addr}:{port}".format(addr=ADDRESS,port=PORT))
         self.LogText.append("Sat TLE data {tletext}".format(tletext=self.my_satellite.tledata))
@@ -811,20 +844,19 @@ class MainWindow(QMainWindow):
         self.LogText.append("TX Frequency Offset = {txfreq_off}".format(txfreq_off=i_cal))
         self.Startbutton.setEnabled(False)
 
-        worker = Worker(self.calc_doppler)
-
-        # Execute
-        self.threadpool.start(worker)
+        self.doppler_worker = Worker(self.calc_doppler)
+        self.threadpool.start(self.doppler_worker)
 
     def calc_doppler(self, progress_callback):
         global CVIADDR
-        global SEMAPHORE
+        global TRACKING_ACTIVE
         global INTERACTIVE
         global myloc
         global f_cal
         global i_cal
         global F0
         global I0
+        global doppler_thres
         
         try:
             with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -882,29 +914,37 @@ class MainWindow(QMainWindow):
                     #set VFOA to FM mode
                     s.sendall(b"M FM 15000\n")
                     time.sleep(0.2)
+                    doppler_thres = DOPPLER_THRES_FM
                 elif self.my_satellite.downmode == "FMN":
                     #set VFOA to WFM mode
                     s.sendall(b"M WFM 15000\n")
                     time.sleep(0.2)
+                    doppler_thres = DOPPLER_THRES_FM
                 elif self.my_satellite.downmode ==  "USB":
                     INTERACTIVE = True
                     print("Set VFO A modulation to USB...")
                     #set VFOA to USB mode
                     s.sendall(b"M USB 3000\n")
                     time.sleep(0.2)
+                    doppler_thres = DOPPLER_THRES_LINEAR
                 elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
                     #set VFOA to Data USB mode
                     s.sendall(b"M PKTUSB 3000\n")
-                    time.sleep(0.2)     
+                    time.sleep(0.2)
+                    doppler_thres = DOPPLER_THRES_LINEAR
                 elif self.my_satellite.downmode == "CW":
                     INTERACTIVE = True
                     #set VFOA to CW mode
                     s.sendall(b"M CW 3000\n")
                     time.sleep(0.2)
+                    doppler_thres = DOPPLER_THRES_LINEAR
                 else:
                     print("*** Downlink mode not implemented yet: {bad}".format(bad=self.my_satellite.downmode))
                     sys.exit()
                 
+                doppler_thres = int(doppler_thres)
+                self.dopplerthresval.setText(str(doppler_thres) + " Hz")
+
                 if OPMODE == False:
                     F_string = "x\n"
                     s.send(bytes(F_string, 'ascii'))
@@ -988,7 +1028,7 @@ class MainWindow(QMainWindow):
                 rx_doppler = F0
                 tx_doppler = I0
 
-                while SEMAPHORE == True:
+                while TRACKING_ACTIVE == True:
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
 
@@ -1019,14 +1059,14 @@ class MainWindow(QMainWindow):
                                         F0 -= delta_F
 
                     new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
-                    if new_rx_doppler != rx_doppler:
+                    if abs(new_rx_doppler-F0) > doppler_thres:
                         rx_doppler = new_rx_doppler
                         F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
                         s.send(bytes(F_string, 'ascii'))
                         self.my_satellite.F = rx_doppler
                     
                     new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
-                    if new_tx_doppler != tx_doppler:
+                    if abs(new_tx_doppler-I0) > doppler_thres:
                         tx_doppler = new_tx_doppler
                         I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
                         if OPMODE == False:
