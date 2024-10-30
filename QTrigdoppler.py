@@ -1100,6 +1100,9 @@ class MainWindow(QMainWindow):
                 vfo_not_moving = 0
                 vfo_not_moving_old = 0
 
+                # Ensure that initial frequencies are always written 
+                tracking_init = 1
+                
                 while TRACKING_ACTIVE == True:
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
