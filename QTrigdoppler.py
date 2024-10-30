@@ -1009,7 +1009,6 @@ class MainWindow(QMainWindow):
                     sys.exit()
                 
                 doppler_thres = int(doppler_thres)
-                self.dopplerthresval.setText(str(doppler_thres) + " Hz")
 
                 if OPMODE == False:
                     F_string = "x\n"
@@ -1149,14 +1148,14 @@ class MainWindow(QMainWindow):
                                     F0 = user_Freq
 
                         if updated_rx and vfo_not_moving and vfo_not_moving_old:
-                            new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
+                            new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F + self.my_satellite.F_cal))
                             if abs(new_rx_doppler-F0) > doppler_thres:
                                 rx_doppler = new_rx_doppler
                                 F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
                                 s.send(bytes(F_string, 'ascii'))
                                 F0 = rx_doppler
                         
-                            new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
+                            new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I))
                             if abs(new_tx_doppler-I0) > doppler_thres:
                                 tx_doppler = new_tx_doppler
                                 I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
