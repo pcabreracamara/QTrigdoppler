@@ -1,7 +1,8 @@
-# QT RigDoppler v0.3 (stable release for Icom 705 and 9700)
+# QT RigDoppler v0.4
 
 Based on K8DP Doug Papay rigdoppler (@K8DP_Doug)  
-Adapted v0.3 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)  
+Adapted v0.3 and QT by EA4HCF Pedro Cabrera (@PCabreraCamara)
+Version 0.4 includes some of the improvements introduced by DL3JOP in its adaptation of the code for the Icom IC-910
   
 RigDoppler is a very simple Python3 script to correct doppler effect in radio satellites using Icom rigs connected to a computer.
 <picture>
@@ -27,9 +28,9 @@ Support files and download links:
   
 AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 software, so can be reused in the same computer.  
 
-## v0.3 Limitations:
+## v0.4 Limitations:
     1) Hamlib and/or CV-I commands tested on Icom 9700, 705 and Yaesu 818 radios.
-    ### v0.3 ToDo List:
+    ### v0.4 ToDo List:
     1) Improve error handling, detect and correct bugs. 
     2) Solve the limitations.
     3) Let me know if you have something else in mind.
@@ -81,6 +82,10 @@ AmsatNames.txt and dopler.sqf are wide and well known files used by PCSat32 soft
       Icom 9700: rigctld.exe -m 3081 -r COMx -s 115200 -T 127.0.0.1
       Icom 705: rigctld.exe -m 3085 -r COMx -c 0xA4 -s 57600 -T 127.0.0.1
       Yaesu 818: rigctld.exe -m 1041 -r COMx -T 127.0.0.1
+
+      For operation with two radios, it is necessary to execute a rigctld command for each radio. For the second radio we must specify a second port, otherwise the program will not be able to communicate correctly. In the configuration the Full Duplex operation must be enabled and we must confirm the port we have used, by default we have configured 5434 for the second radio, but you can modify it for the one you like.
+      For example, the second Yaesu 818 process will looks like: 
+      rigctld.exe -m 1041 -r COMx -t 5434 -T 127.0.0.1
 
     2) Check *config.ini* file and review all parameters, but really those are very important to review:  
         QTH coordinates: latitude, longitude and altitude 

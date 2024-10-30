@@ -102,6 +102,7 @@ else:
     PORTFULL = 5434
 
 useroffsets = {}
+subtone_list = ["None", "67 Hz", "71.9 Hz"]
 
 for (each_key, each_val) in configur.items('offset_profiles'):
     # Format SATNAME:RXoffset,TXoffset
@@ -605,6 +606,24 @@ class MainWindow(QMainWindow):
         self.combo1.currentTextChanged.connect(self.sat_changed) 
         combo_layout.addWidget(self.combo1)
 
+        self.tpxtext = QLabel("Transponder:")
+        self.tpxtext.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        combo_layout.addWidget(self.tpxtext)
+        self.combo2 = QComboBox()
+        self.tpx_list_view = self.combo1.view()
+        self.tpx_list_view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)        
+        QScroller.grabGesture(self.tpx_list_view.viewport(), QScroller.LeftMouseButtonGesture)
+        self.combo2.currentTextChanged.connect(self.tpx_changed) 
+        combo_layout.addWidget(self.combo2)
+        
+        self.tonetext = QLabel("Subtone:")
+        self.tonetext.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        combo_layout.addWidget(self.tonetext)
+        self.combo3 = QComboBox()
+        self.combo3.addItems(subtone_list)
+        self.combo3.currentTextChanged.connect(self.tone_changed) 
+        combo_layout.addWidget(self.combo3)
+
         myFont=QFont()
         myFont.setBold(True)
 
@@ -767,101 +786,130 @@ class MainWindow(QMainWindow):
             self.LogText.append("*** New TX offset: {thenew}".format(thenew=i))
     
     def sat_changed(self, satname):
+        self.my_satellite.name = satname
+
+        try:
+            with open(SQFILE, 'r') as h:
+                sqfdata = h.readlines()
+                tpxlist=[]
+                self.combo2.clear()
+                for line in sqfdata:
+                    if line.startswith(satname):
+                        tpxlist += [str(line.split(",")[8].strip())]
+                        
+                tpxlist=list(dict.fromkeys(tpxlist))
+                self.combo2.addItems(tpxlist)  
+                    
+        except IOError:
+            raise MyError()
+    
+    def tpx_changed(self, tpxname):
         global F0
         global I0
         global f_cal
         global i_cal
         global MAX_OFFSET_RX
-        global MAX_OFFSET_TX
-
-        self.LogText.clear()
-        #   EA4HCF: Let's use PCSat32 translation from NoradID to Sat names, boring but useful for next step.
-        #   From NORAD_ID identifier, will get the SatName to search satellite frequencies in dopler file in next step.
-        try:
-            with open(SATNAMES, 'r') as g:
-                namesdata = g.readlines()  
-                
-            for line in namesdata:
-                if re.search(satname, line):
-                    self.my_satellite.noradid = line.split(" ")[0].strip()
-        except IOError:
-            raise MyError()
         
-        if self.my_satellite.noradid == 0:
-            self.LogText.append("***  Satellite not found in {badfile} file.".format(badfile=SATNAMES))
-
-        #   EA4HCF: Now, let's really use PCSat32 dople file .
-        #   From SatName,  will get the RX and TX frequencies.
         try:
             with open(SQFILE, 'r') as h:
-                sqfdata = h.readlines()  
-                
-            for lineb in sqfdata:
-                if re.search(satname, lineb):
-                    self.my_satellite.F = self.my_satellite.F_init = float(lineb.split(",")[1].strip())*1000
-                    self.rxfreq.setText(str(self.my_satellite.F))
-                    F0 = self.my_satellite.F + f_cal
-                    self.my_satellite.I = self.my_satellite.I_init = float(lineb.split(",")[2].strip())*1000
-                    self.txfreq.setText(str(self.my_satellite.I))
-                    I0 = self.my_satellite.I + i_cal
-                    self.my_satellite.downmode =  lineb.split(",")[3].strip()
-                    self.my_satellite.upmode =  lineb.split(",")[4].strip()
-                    self.my_satellite.mode =  lineb.split(",")[5].strip()
-                    if self.my_satellite.noradid == 0 or self.my_satellite.F == 0 or self.my_satellite.I == 0:
-                        self.Startbutton.setEnabled(False)
-                        self.syncbutton.setEnabled(False)
-                    else:
-                        self.Startbutton.setEnabled(True)
-                        self.syncbutton.setEnabled(True)
-                    break
+                sqfdata = h.readlines()
+                for lineb in sqfdata:
+                    if lineb.startswith(";") == 0:
+                        if lineb.split(",")[8].strip() == tpxname and lineb.split(",")[0].strip() == self.my_satellite.name:
+                            self.my_satellite.F = self.my_satellite.F_init = float(lineb.split(",")[1].strip())*1000
+                            self.rxfreq.setText(str('{:,}'.format(self.my_satellite.F))+ " Hz")
+                            F0 = self.my_satellite.F + f_cal
+                            self.my_satellite.I = self.my_satellite.I_init = float(lineb.split(",")[2].strip())*1000
+                            self.txfreq.setText(str('{:,}'.format(self.my_satellite.I)) + " Hz")
+                            I0 = self.my_satellite.I + i_cal
+                            self.my_satellite.downmode =  lineb.split(",")[3].strip()
+                            self.my_satellite.upmode =  lineb.split(",")[4].strip()
+                            self.my_satellite.mode =  lineb.split(",")[5].strip()
+                            #  check if frequencies are in the same band: e.g. U/U, V/V vs V/U, U/V
+                            if abs(self.my_satellite.F - self.my_satellite.I) > 10000000:
+                                self.my_satellite.rig_satmode = 1
+                            else:
+                                self.my_satellite.rig_satmode = 0
+                            if self.my_satellite.F == 0 or self.my_satellite.I == 0:
+                                self.Startbutton.setEnabled(False)
+                                self.Stopbutton.setEnabled(False)
+                                self.syncbutton.setEnabled(False)
+                            else:
+                                self.Startbutton.setEnabled(True)
+                                self.syncbutton.setEnabled(True)
+                            break
         except IOError:
             raise MyError()
 
-        if satname in useroffsets:
-            usrrxoffset=int(useroffsets[satname].split(',')[0])
-            usrtxoffset=int(useroffsets[satname].split(',')[1])
+        self.rxoffsetbox.setValue(0)
+        for tpx in useroffsets:
+            if tpx[0] == self.my_satellite.name and tpx[1] == tpxname:
 
-            if usrrxoffset < MAX_OFFSET_RX and usrrxoffset > -MAX_OFFSET_RX:
-                self.rxoffsetbox.setMaximum(MAX_OFFSET_RX)
-                self.rxoffsetbox.setMinimum(-MAX_OFFSET_RX)
-                self.rxoffsetbox.setValue(usrrxoffset)
-            else:
-                self.LogText.append("***  ERROR: Max RX offset ({max}) not align with user offset: {value}.".format(value=usrrxoffset,max =MAX_OFFSET_RX))
-                self.rxoffsetbox.setValue(0)
-            
-            if usrtxoffset < MAX_OFFSET_TX and usrtxoffset > -MAX_OFFSET_TX:
-                self.txoffsetbox.setMaximum(MAX_OFFSET_TX)
-                self.txoffsetbox.setMinimum(-MAX_OFFSET_TX)
-                self.txoffsetbox.setValue(usrtxoffset)
-            else:
-                self.LogText.append("***  ERROR: Max TX offset ({max}) not align with user offset: {value}.".format(value=usrtxoffset,max=MAX_OFFSET_TX))
-                self.txoffsetbox.setValue(0)
-        else:
-            self.rxoffsetbox.setValue(0)
-            self.txoffsetbox.setValue(0)
+                usrrxoffset=int(tpx[2])
+
+                if usrrxoffset < MAX_OFFSET_RX and usrrxoffset > -MAX_OFFSET_RX:
+                    self.rxoffsetbox.setMaximum(MAX_OFFSET_RX)
+                    self.rxoffsetbox.setMinimum(-MAX_OFFSET_RX)
+                    self.rxoffsetbox.setValue(usrrxoffset)
+                    self.my_satellite.new_cal = 1
+                    self.my_satellite.F_cal =  f_cal = usrrxoffset
+                else:
+                    self.rxoffsetbox.setValue(0)
+                
+                
 
         try:
             with open(TLEFILE, 'r') as f:
                 data = f.readlines()   
                 
                 for index, line in enumerate(data):
-                    if str(self.my_satellite.noradid) in line[2:7]:
-                        self.my_satellite.tledata = ephem.readtle(data[index-1], data[index], data[index+1])
+                    if str(self.my_satellite.name) in line:
+                        print(str(data[index]) + "|" + str(data[index+1]) + "|" + str(data[index+2]))
+                        self.my_satellite.tledata = ephem.readtle(data[index], data[index+1], data[index+2])
                         break
         except IOError:
             raise MyError()
         
         if self.my_satellite.tledata == "":
-            self.LogText.append("***  Satellite not found in {badfile} file.".format(badfile=TLEFILE))
             self.Startbutton.setEnabled(False)
+            self.syncbutton.setEnabled(False)
             return
         else:
-            day_of_year = datetime.now().timetuple().tm_yday
-            tleage = int(data[index][20:23])
-            diff = day_of_year - tleage
+            #day_of_year = datetime.now().timetuple().tm_yday
+            #tleage = int(data[index+1][20:23])
+            #diff = day_of_year - tleage
 
-            if diff > 7:
-                self.LogText.append("***  Warning, your TLE file is getting older: {days} days.".format(days=diff))
+            #if diff > 7:
+            #    
+            pass
+            
+        self.timer.start()
+
+    def tone_changed(self, tone_name):
+            
+        if tone_name == "67 Hz":
+            F_string = "U TONE 1\n"
+            s.send(bytes(F_string, 'ascii'))
+            time.sleep(0.2)
+            
+            F_string = "C 670\n"
+            s.send(bytes(F_string, 'ascii'))
+            time.sleep(0.2)
+
+        elif tone_name == "71.9 Hz":
+            F_string = "U TONE 1\n"
+            s.send(bytes(F_string, 'ascii'))
+            time.sleep(0.2)
+
+            F_string = "C 719\n"
+            s.send(bytes(F_string, 'ascii'))
+            time.sleep(0.2)
+
+        elif tone_name == "None":
+            F_string = "U TONE 0\n"
+            s.send(bytes(F_string, 'ascii'))
+            time.sleep(0.2)
+
 
     def the_exit_button_was_clicked(self):
         if RADIO == "705" or "818":
@@ -1010,6 +1058,7 @@ class MainWindow(QMainWindow):
                 
                 doppler_thres = int(doppler_thres)
 
+                # Split mode operation
                 if OPMODE == False:
                     F_string = "x\n"
                     s.send(bytes(F_string, 'ascii'))
@@ -1047,38 +1096,39 @@ class MainWindow(QMainWindow):
                     else:
                         print("*** Uplink mode not implemented yet: {bad}".format(bad=self.my_satellite.upmode))
                         sys.exit()
+                # Full duplex operation: 2 radios
                 else:
                     with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s2:
-                        s2.connect((ADDRESS, PORT))
+                        s2.connect((ADDRESS, PORTFULL))
                         
                         F_string = "m\n"
                         s2.send(bytes(F_string, 'ascii'))
                         time.sleep(0.2)
                         data = s2.recv(1024)
                         curr_mode = str(data)
-                        print("Current mode VFO-A: ({a})".format(a=curr_mode))
+                        print("Current mode second radio VFO-A: ({a})".format(a=curr_mode))
                         
                         s2.sendall(b"V VFOA\n")
                         time.sleep(0.2) 
-                        if self.my_satellite.downmode == "FM":
+                        if self.my_satellite.upmode == "FM":
                             #set VFOA to FM mode
                             s2.sendall(b"M FM 15000\n")
                             time.sleep(0.2)
-                        elif self.my_satellite.downmode == "FMN":
+                        elif self.my_satellite.upmode == "FMN":
                             #set VFOA to WFM mode
                             s2.sendall(b"M WFM 15000\n")
                             time.sleep(0.2)
-                        elif self.my_satellite.downmode ==  "USB":
+                        elif self.my_satellite.upmode ==  "LSB":
                             INTERACTIVE = True
-                            print("Set VFO A modulation to USB...")
-                            #set VFOA to USB mode
-                            s2.sendall(b"M USB 3000\n")
+                            print("Set second radio VFO A modulation to LSB...")
+                            #set VFOA to LSB mode
+                            s2.sendall(b"M LSB 3000\n")
                             time.sleep(0.2)
-                        elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
-                            #set VFOA to Data USB mode
-                            s2.sendall(b"M PKTUSB 3000\n")
+                        elif (self.my_satellite.upmode == "DATA-LSB" or self.my_satellite.downmode == "LSB-D"):
+                            #set VFOA to Data LSB mode
+                            s2.sendall(b"M PKTLSB 3000\n")
                             time.sleep(0.2)     
-                        elif self.my_satellite.downmode == "CW":
+                        elif self.my_satellite.upmode == "CW":
                             INTERACTIVE = True
                             #set VFOA to CW mode
                             s2.sendall(b"M CW 3000\n")
@@ -1086,113 +1136,114 @@ class MainWindow(QMainWindow):
                         else:
                             print("*** Downlink mode not implemented yet: {bad}".format(bad=self.my_satellite.downmode))
                             sys.exit()
+                        s2.sendall(b"V VFOA\n")
 
-                print("All config done, starting doppler...")
-                s.sendall(b"V VFOA\n")
+                        print("All config done, starting doppler...")
+                        s.sendall(b"V VFOA\n")
 
-                date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
-                myloc.date = ephem.Date(date_val)
+                        date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
+                        myloc.date = ephem.Date(date_val)
 
-                F0 = rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F)
-                I0 = tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I)
-                user_Freq = 0;
-                user_Freq_history = [0, 0, 0, 0]
-                vfo_not_moving = 0
-                vfo_not_moving_old = 0
+                        F0 = rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F)
+                        I0 = tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I)
+                        user_Freq = 0;
+                        user_Freq_history = [0, 0, 0, 0]
+                        vfo_not_moving = 0
+                        vfo_not_moving_old = 0
 
-                # Ensure that initial frequencies are always written 
-                tracking_init = 1
-                
-                while TRACKING_ACTIVE == True:
-                    date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
-                    myloc.date = ephem.Date(date_val)
-
-                    if INTERACTIVE == True:
-                        # read current RX
-                        try:
-                            F_string = "f\n"
-                            s.send(bytes(F_string, 'ascii'))
-                            time.sleep(0.2)
-                            data = s.recv(1024)
-                            user_Freq = float(str(data).split('\\n')[0].replace("b\'",'').replace('RPRT',''))
-                            updated_rx = 1
-                            user_Freq_history.pop(0)
-                            user_Freq_history.append(user_Freq)
-                        except:
-                            updated_rx = 0
-                            user_Freq = 0
-
-                        vfo_not_moving_old = vfo_not_moving
-                        vfo_not_moving = user_Freq_history.count(user_Freq_history[0]) == len(user_Freq_history)
-
-                        if user_Freq > 0 and updated_rx == 1 and vfo_not_moving and self.my_satellite.new_cal == 0:
-                            if abs(user_Freq - F0) > 1:
-                                if True:
-                                    if user_Freq > F0:
-                                        delta_F = user_Freq - F0
-                                        if self.my_satellite.mode == "REV":
-                                            self.my_satellite.I -= delta_F
-                                            I0 -= delta_F
-                                            self.my_satellite.F += delta_F
-                                        else:
-                                            self.my_satellite.I += delta_F
-                                            I0 += delta_F
-                                            self.my_satellite.F += delta_F
-                                    else:
-                                        delta_F = F0 - user_Freq
-                                        if self.my_satellite.mode == "REV":
-                                            self.my_satellite.I += delta_F
-                                            I0 += delta_F
-                                            self.my_satellite.F -= delta_F
-                                        else:
-                                            self.my_satellite.I -= delta_F
-                                            I0 -= delta_F
-                                            self.my_satellite.F -= delta_F
-                                    F0 = user_Freq
-
-                        if updated_rx and vfo_not_moving and vfo_not_moving_old:
-                            new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F + self.my_satellite.F_cal))
-                            if abs(new_rx_doppler-F0) > doppler_thres:
-                                rx_doppler = new_rx_doppler
-                                F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
-                                s.send(bytes(F_string, 'ascii'))
-                                F0 = rx_doppler
+                        # Ensure that initial frequencies are always written 
+                        tracking_init = 1
                         
-                            new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I))
-                            if abs(new_tx_doppler-I0) > doppler_thres:
-                                tx_doppler = new_tx_doppler
-                                I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                                if OPMODE == False:
-                                    s.send(bytes(I_string, 'ascii'))
-                                else:
-                                    F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                                    s2.send(bytes(F2_string, 'ascii'))
-                                I0 = tx_doppler
-                    # FM sats, no dial input accepted!
-                    else:
-                        new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata,self.my_satellite.F + self.my_satellite.F_cal))
-                        new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata,self.my_satellite.I))
-                        if abs(new_rx_doppler-F0) > doppler_thres or tracking_init == 1:
-                            tracking_init = 0
-                            rx_doppler = new_rx_doppler
-                            F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
-                            s.send(bytes(F_string, 'ascii'))
-                            F0 = rx_doppler
-                            time.sleep(0.2)
-                        if abs(new_tx_doppler-I0) > doppler_thres or tracking_init == 1:
-                            tracking_init = 0
-                            tx_doppler = new_tx_doppler
-                            I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                            if OPMODE == False:
-                                s.send(bytes(I_string, 'ascii'))
-                            else:
-                                F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                                s2.send(bytes(F2_string, 'ascii'))
-                            I0 = tx_doppler
-                            time.sleep(0.2)
+                        while TRACKING_ACTIVE == True:
+                            date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
+                            myloc.date = ephem.Date(date_val)
 
-                    self.my_satellite.new_cal = 0
-                    time.sleep(0.01)
+                            if INTERACTIVE == True:
+                                # read current RX
+                                try:
+                                    F_string = "f\n"
+                                    s.send(bytes(F_string, 'ascii'))
+                                    time.sleep(0.2)
+                                    data = s.recv(1024)
+                                    user_Freq = float(str(data).split('\\n')[0].replace("b\'",'').replace('RPRT',''))
+                                    updated_rx = 1
+                                    user_Freq_history.pop(0)
+                                    user_Freq_history.append(user_Freq)
+                                except:
+                                    updated_rx = 0
+                                    user_Freq = 0
+
+                                vfo_not_moving_old = vfo_not_moving
+                                vfo_not_moving = user_Freq_history.count(user_Freq_history[0]) == len(user_Freq_history)
+
+                                if user_Freq > 0 and updated_rx == 1 and vfo_not_moving and self.my_satellite.new_cal == 0:
+                                    if abs(user_Freq - F0) > 1:
+                                        if True:
+                                            if user_Freq > F0:
+                                                delta_F = user_Freq - F0
+                                                if self.my_satellite.mode == "REV":
+                                                    self.my_satellite.I -= delta_F
+                                                    I0 -= delta_F
+                                                    self.my_satellite.F += delta_F
+                                                else:
+                                                    self.my_satellite.I += delta_F
+                                                    I0 += delta_F
+                                                    self.my_satellite.F += delta_F
+                                            else:
+                                                delta_F = F0 - user_Freq
+                                                if self.my_satellite.mode == "REV":
+                                                    self.my_satellite.I += delta_F
+                                                    I0 += delta_F
+                                                    self.my_satellite.F -= delta_F
+                                                else:
+                                                    self.my_satellite.I -= delta_F
+                                                    I0 -= delta_F
+                                                    self.my_satellite.F -= delta_F
+                                            F0 = user_Freq
+
+                                if updated_rx and vfo_not_moving and vfo_not_moving_old:
+                                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F + self.my_satellite.F_cal))
+                                    if abs(new_rx_doppler-F0) > doppler_thres:
+                                        rx_doppler = new_rx_doppler
+                                        F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
+                                        s.send(bytes(F_string, 'ascii'))
+                                        F0 = rx_doppler
+                                
+                                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I))
+                                    if abs(new_tx_doppler-I0) > doppler_thres:
+                                        tx_doppler = new_tx_doppler
+                                        I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                        if OPMODE == False:
+                                            s.send(bytes(I_string, 'ascii'))
+                                        else:
+                                            F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                            s2.send(bytes(F2_string, 'ascii'))
+                                        I0 = tx_doppler
+                            # FM sats, no dial input accepted!
+                            else:
+                                new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata,self.my_satellite.F + self.my_satellite.F_cal))
+                                new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata,self.my_satellite.I))
+                                if abs(new_rx_doppler-F0) > doppler_thres or tracking_init == 1:
+                                    tracking_init = 0
+                                    rx_doppler = new_rx_doppler
+                                    F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
+                                    s.send(bytes(F_string, 'ascii'))
+                                    F0 = rx_doppler
+                                    time.sleep(0.2)
+                                if abs(new_tx_doppler-I0) > doppler_thres or tracking_init == 1:
+                                    tracking_init = 0
+                                    tx_doppler = new_tx_doppler
+                                    I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                    if OPMODE == False:
+                                        s.send(bytes(I_string, 'ascii'))
+                                    else:
+                                        F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                        s2.send(bytes(F2_string, 'ascii'))
+                                    I0 = tx_doppler
+                                    time.sleep(0.2)
+
+                            self.my_satellite.new_cal = 0
+                            time.sleep(0.01)
 
         except socket.error:
             print("Failed to connect to Rigctld on {addr}:{port}.".format(addr=ADDRESS,port=PORT))
