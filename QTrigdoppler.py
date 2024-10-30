@@ -944,7 +944,7 @@ class MainWindow(QMainWindow):
                         sys.exit()
                 else:
                     with socketcontext(socket.AF_INET, socket.SOCK_STREAM) as s2:
-                        s2.connect((ADDRESS, PORT))
+                        s2.connect((ADDRESS, PORTFULL))
                         
                         F_string = "m\n"
                         s2.send(bytes(F_string, 'ascii'))
@@ -955,25 +955,25 @@ class MainWindow(QMainWindow):
                         
                         s2.sendall(b"V VFOA\n")
                         time.sleep(0.2) 
-                        if self.my_satellite.downmode == "FM":
+                        if self.my_satellite.upmode == "FM":
                             #set VFOA to FM mode
                             s2.sendall(b"M FM 15000\n")
                             time.sleep(0.2)
-                        elif self.my_satellite.downmode == "FMN":
+                        elif self.my_satellite.upmode == "FMN":
                             #set VFOA to WFM mode
                             s2.sendall(b"M WFM 15000\n")
                             time.sleep(0.2)
-                        elif self.my_satellite.downmode ==  "USB":
+                        elif self.my_satellite.upmode ==  "USB":
                             INTERACTIVE = True
                             print("Set VFO A modulation to USB...")
                             #set VFOA to USB mode
                             s2.sendall(b"M USB 3000\n")
                             time.sleep(0.2)
-                        elif (self.my_satellite.downmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
+                        elif (self.my_satellite.upmode == "DATA-USB" or self.my_satellite.downmode == "USB-D"):
                             #set VFOA to Data USB mode
                             s2.sendall(b"M PKTUSB 3000\n")
                             time.sleep(0.2)     
-                        elif self.my_satellite.downmode == "CW":
+                        elif self.my_satellite.upmode == "CW":
                             INTERACTIVE = True
                             #set VFOA to CW mode
                             s2.sendall(b"M CW 3000\n")
@@ -982,61 +982,61 @@ class MainWindow(QMainWindow):
                             print("*** Downlink mode not implemented yet: {bad}".format(bad=self.my_satellite.downmode))
                             sys.exit()
 
-                print("All config done, starting doppler...")
-                s.sendall(b"V VFOA\n")
+                        print("All config done, starting doppler...")
+                        s.sendall(b"V VFOA\n")
 
-                rx_doppler = F0
-                tx_doppler = I0
+                        rx_doppler = F0
+                        tx_doppler = I0
 
-                while SEMAPHORE == True:
-                    date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
-                    myloc.date = ephem.Date(date_val)
+                        while SEMAPHORE == True:
+                            date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
+                            myloc.date = ephem.Date(date_val)
 
-                    if INTERACTIVE == True:
-                        F_string = "f\n"
-                        s.send(bytes(F_string, 'ascii'))
-                        time.sleep(0.2)
-                        data = s.recv(1024)
-                        user_Freq = float(str(data).split('\\n')[0].replace("b\'",'').replace('RPRT',''))
+                            if INTERACTIVE == True:
+                                F_string = "f\n"
+                                s.send(bytes(F_string, 'ascii'))
+                                time.sleep(0.2)
+                                data = s.recv(1024)
+                                user_Freq = float(str(data).split('\\n')[0].replace("b\'",'').replace('RPRT',''))
 
-                        if user_Freq > 0:
-                            if abs(user_Freq - self.my_satellite.F) > 100:
-                                if user_Freq > self.my_satellite.F:
-                                    delta_F = user_Freq - self.my_satellite.F
-                                    if self.my_satellite.mode == "REV":
-                                        I0 -= delta_F
-                                        F0 += delta_F
-                                    else:
-                                        I0 += delta_F
-                                        F0 += delta_F
+                                if user_Freq > 0:
+                                    if abs(user_Freq - self.my_satellite.F) > 100:
+                                        if user_Freq > self.my_satellite.F:
+                                            delta_F = user_Freq - self.my_satellite.F
+                                            if self.my_satellite.mode == "REV":
+                                                I0 -= delta_F
+                                                F0 += delta_F
+                                            else:
+                                                I0 += delta_F
+                                                F0 += delta_F
+                                        else:
+                                            delta_F = self.my_satellite.F - user_Freq
+                                            if self.my_satellite.mode == "REV":
+                                                I0 += delta_F
+                                                F0 -= delta_F
+                                            else:
+                                                I0 -= delta_F
+                                                F0 -= delta_F
+
+                            new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
+                            if new_rx_doppler != rx_doppler:
+                                rx_doppler = new_rx_doppler
+                                F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
+                                s.send(bytes(F_string, 'ascii'))
+                                self.my_satellite.F = rx_doppler
+                            
+                            new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
+                            if new_tx_doppler != tx_doppler:
+                                tx_doppler = new_tx_doppler
+                                I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                if OPMODE == False:
+                                    s.send(bytes(I_string, 'ascii'))
                                 else:
-                                    delta_F = self.my_satellite.F - user_Freq
-                                    if self.my_satellite.mode == "REV":
-                                        I0 += delta_F
-                                        F0 -= delta_F
-                                    else:
-                                        I0 -= delta_F
-                                        F0 -= delta_F
+                                    F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                    s2.send(bytes(F2_string, 'ascii'))
+                                self.my_satellite.I = tx_doppler
 
-                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
-                    if new_rx_doppler != rx_doppler:
-                        rx_doppler = new_rx_doppler
-                        F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
-                        s.send(bytes(F_string, 'ascii'))
-                        self.my_satellite.F = rx_doppler
-                    
-                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
-                    if new_tx_doppler != tx_doppler:
-                        tx_doppler = new_tx_doppler
-                        I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                        if OPMODE == False:
-                            s.send(bytes(I_string, 'ascii'))
-                        else:
-                            F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                            s2.send(bytes(F2_string, 'ascii'))
-                        self.my_satellite.I = tx_doppler
-
-                    time.sleep(1)
+                            time.sleep(1)
 
         except socket.error:
             print("Failed to connect to Rigctld on {addr}:{port}.".format(addr=ADDRESS,port=PORT))
