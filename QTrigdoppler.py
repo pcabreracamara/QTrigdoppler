@@ -810,6 +810,7 @@ class MainWindow(QMainWindow):
         global i_cal
         global MAX_OFFSET_RX
         
+        # Load from SQF file SAT name, freqs & modes
         try:
             with open(SQFILE, 'r') as h:
                 sqfdata = h.readlines()
@@ -817,10 +818,10 @@ class MainWindow(QMainWindow):
                     if lineb.startswith(";") == 0:
                         if lineb.split(",")[8].strip() == tpxname and lineb.split(",")[0].strip() == self.my_satellite.name:
                             self.my_satellite.F = self.my_satellite.F_init = float(lineb.split(",")[1].strip())*1000
-                            self.rxfreq.setText(str('{:,}'.format(self.my_satellite.F))+ " Hz")
+                            self.rxfreq.setText(str(float(self.my_satellite.F)))
                             F0 = self.my_satellite.F + f_cal
                             self.my_satellite.I = self.my_satellite.I_init = float(lineb.split(",")[2].strip())*1000
-                            self.txfreq.setText(str('{:,}'.format(self.my_satellite.I)) + " Hz")
+                            self.txfreq.setText(str(float(self.my_satellite.I)))
                             I0 = self.my_satellite.I + i_cal
                             self.my_satellite.downmode =  lineb.split(",")[3].strip()
                             self.my_satellite.upmode =  lineb.split(",")[4].strip()
@@ -841,6 +842,7 @@ class MainWindow(QMainWindow):
         except IOError:
             raise MyError()
 
+        # Load user offsets profiles
         self.rxoffsetbox.setValue(0)
         for tpx in useroffsets:
             if tpx[0] == self.my_satellite.name and tpx[1] == tpxname:
@@ -855,33 +857,32 @@ class MainWindow(QMainWindow):
                     self.my_satellite.F_cal =  f_cal = usrrxoffset
                 else:
                     self.rxoffsetbox.setValue(0)
-                
-                
-
+        
+        # Load 2 Elememnt Files
         try:
             with open(TLEFILE, 'r') as f:
                 data = f.readlines()   
                 
                 for index, line in enumerate(data):
                     if str(self.my_satellite.name) in line:
-                        print(str(data[index]) + "|" + str(data[index+1]) + "|" + str(data[index+2]))
                         self.my_satellite.tledata = ephem.readtle(data[index], data[index+1], data[index+2])
                         break
         except IOError:
             raise MyError()
         
-        if self.my_satellite.tledata == "":
+        # Check TLE file is not too old
+        if 0 <= index+2 < len(data):
+            day_of_year = datetime.now().timetuple().tm_yday
+            tleage = int(data[index+1][20:23])
+            diff = day_of_year - tleage
+
+            if diff > 7:
+                self.LogText.append("***  Warning, your TLE file is getting older: {days} days.".format(days=diff))
+        else:
+            self.LogText.append("***  Satellite not found in {badfile} file.".format(badfile=TLEFILE))
             self.Startbutton.setEnabled(False)
             self.syncbutton.setEnabled(False)
             return
-        else:
-            #day_of_year = datetime.now().timetuple().tm_yday
-            #tleage = int(data[index+1][20:23])
-            #diff = day_of_year - tleage
-
-            #if diff > 7:
-            #    
-            pass
             
         self.timer.start()
 
