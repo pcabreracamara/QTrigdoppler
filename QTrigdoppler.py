@@ -22,7 +22,6 @@ from configparser import ConfigParser
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from qt_material import apply_stylesheet
 
 C = 299792458.
 
@@ -1261,23 +1260,5 @@ except Exception as e:
 
 app = QApplication(sys.argv)
 window = MainWindow()
-#apply_stylesheet(app, theme='dark_lightgreen.xml')
-#tooltip_stylesheet = """
-#        QToolTip {
-#            color: white;
-#            background-color: black;
-#        }
-#        QComboBox {
-#            color: white;
-#        }
-#        QSpinBox {
-#            color: white;
-#        }
-#        QLineEdit {
-#            color: white;
-#        }
-#    """
-#app.setStyleSheet(app.styleSheet()+tooltip_stylesheet)
-#window.setWindowFlag(Qt.FramelessWindowHint)
 window.show()
 app.exec()
