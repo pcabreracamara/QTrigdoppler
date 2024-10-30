@@ -22,6 +22,7 @@ from configparser import ConfigParser
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from qt_material import apply_stylesheet
 
 C = 299792458.
 
@@ -33,17 +34,31 @@ def socketcontext(*args, **kwargs):
     yield s
     s.close()
 
-def tx_dopplercalc(ephemdata):
-    global I0
+### Calculates the tx doppler frequency
+def tx_dopplercalc(ephemdata, freq_at_sat):
     ephemdata.compute(myloc)
-    doppler = int(I0 + ephemdata.range_velocity * I0 / C)
+    doppler = int(freq_at_sat + ephemdata.range_velocity * freq_at_sat / C)
+    return doppler
+### Calculates the rx doppler frequency
+def rx_dopplercalc(ephemdata, freq_at_sat):
+    ephemdata.compute(myloc)
+    doppler = int(freq_at_sat - ephemdata.range_velocity * freq_at_sat / C)
     return doppler
 
-def rx_dopplercalc(ephemdata):
-    global F0
+def sat_ele_calc(ephemdata):
     ephemdata.compute(myloc)
-    doppler = int(F0 - ephemdata.range_velocity * F0 / C)
-    return doppler
+    ele = format(ephemdata.alt/ math.pi * 180.0,'.2f' )
+    return ele
+    
+def sat_azi_calc(ephemdata):
+    ephemdata.compute(myloc)
+    azi = format(ephemdata.az/ math.pi * 180.0,'.2f' )
+    return azi
+
+def sat_height_calc(ephemdata):
+    ephemdata.compute(myloc)
+    height = format(float(ephemdata.elevation)/1000.0,'.2f') 
+    return height
 
 def MyError():
     print("Failed to find required file!")
@@ -116,8 +131,17 @@ class Satellite:
     mode = ""
     F = 0
     F_init = 0
+    F_cal = 0
     I = 0
     I_init = 0
+    I_cal = 0
+    new_cal = 0
+    down_doppler = 0
+    down_doppler_old = 0
+    down_doppler_rate = 0
+    up_doppler = 0
+    up_doppler_old = 0
+    up_doppler_rate = 0
     tledata = ""
 
 class ConfigWindow(QMainWindow):
@@ -161,11 +185,11 @@ class ConfigWindow(QMainWindow):
 
         uplayout = QHBoxLayout()
         mediumlayout = QHBoxLayout()
-        downlayout = QHBoxLayout()
+        medlayout = QHBoxLayout()
 
         pagelayout.addLayout(uplayout)
         pagelayout.addLayout(mediumlayout)
-        pagelayout.addLayout(downlayout)
+        pagelayout.addLayout(medlayout)
         
         qth_layout = QVBoxLayout()
         satellite_layout = QVBoxLayout()
@@ -180,8 +204,8 @@ class ConfigWindow(QMainWindow):
         mediumlayout.addLayout(radio_layout)
         mediumlayout.addLayout(hamlib_layout)
 
-        downlayout.addLayout(offset_layout)
-        downlayout.addLayout(buttons_layout)
+        medlayout.addLayout(offset_layout)
+        medlayout.addLayout(buttons_layout)
 
         ### QTH
         self.qth = QLabel("QTH Parameters")
@@ -254,21 +278,21 @@ class ConfigWindow(QMainWindow):
 
          # 1x Label doppler fm threshold
         self.doppler_fm_threshold_lbl = QLabel("Doppler threshold for FM")
-        qth_layout.addWidget(self.doppler_fm_threshold_lbl, 6, 0)
+        qth_layout.addWidget(self.doppler_fm_threshold_lbl)
 
         self.doppler_fm_threshold = QLineEdit()
         self.doppler_fm_threshold.setMaxLength(6)
         self.doppler_fm_threshold.setText(str(DOPPLER_THRES_FM))
-        qth_layout.addWidget(self.doppler_fm_threshold, 6, 1)
+        qth_layout.addWidget(self.doppler_fm_threshold)
         
         # 1x Label doppler linear threshold
         self.doppler_linear_threshold_lbl = QLabel("Doppler threshold for Linear")
-        qth_layout.addWidget(self.doppler_linear_threshold_lbl, 7, 0)
+        qth_layout.addWidget(self.doppler_linear_threshold_lbl)
 
         self.doppler_linear_threshold = QLineEdit()
         self.doppler_linear_threshold.setMaxLength(6)
         self.doppler_linear_threshold.setText(str(DOPPLER_THRES_LINEAR))
-        qth_layout.addWidget(self.doppler_linear_threshold, 7, 1)
+        qth_layout.addWidget(self.doppler_linear_threshold)
 
         ### Satellite
         self.sat = QLabel("Satellite Parameters")
@@ -539,16 +563,18 @@ class MainWindow(QMainWindow):
         self.counter = 0
         self.my_satellite = Satellite()
 
-        self.setWindowTitle("QT RigDoppler v0.3")
+        self.setWindowTitle("QT RigDoppler v0.4")
         self.setGeometry(0, 0, 800, 150)
 
         pagelayout = QVBoxLayout()
 
         uplayout = QHBoxLayout()
-        downlayout = QHBoxLayout()
+        medlayout = QHBoxLayout()
+        botttomlayout = QHBoxLayout()
 
         pagelayout.addLayout(uplayout)
-        pagelayout.addLayout(downlayout)
+        pagelayout.addLayout(medlayout)
+        pagelayout.addLayout(botttomlayout)
         
         labels_layout = QVBoxLayout()
         combo_layout = QVBoxLayout()
@@ -583,37 +609,49 @@ class MainWindow(QMainWindow):
         myFont=QFont()
         myFont.setBold(True)
 
+        rx_labels_radio_layout = QHBoxLayout()
         # 1x Label: RX freq
-        self.rxfreqtitle = QLabel("RX freq:")
+        self.rxfreqtitle = QLabel("RX @ Radio:")
         self.rxfreqtitle.setFont(myFont)
-        labels_layout.addWidget(self.rxfreqtitle)
+        rx_labels_radio_layout.addWidget(self.rxfreqtitle)
 
         self.rxfreq = QLabel("0.0")
         self.rxfreq.setFont(myFont)
-        labels_layout.addWidget(self.rxfreq)
+        rx_labels_radio_layout.addWidget(self.rxfreq)
 
+        labels_layout.addLayout(rx_labels_radio_layout)
+
+        rx_labels_sat_layout = QHBoxLayout()
         # 1x Label: RX freq Satellite
-        self.rxfreqsat_lbl = QLabel("RX freq on Sat:")
-        labels_layout.addWidget(self.rxfreqsat_lbl)
+        self.rxfreqsat_lbl = QLabel("RX @ Sat:")
+        rx_labels_sat_layout.addWidget(self.rxfreqsat_lbl)
 
         self.rxfreq_onsat = QLabel("0.0")
-        labels_layout.addWidget(self.rxfreq_onsat)
+        rx_labels_sat_layout.addWidget(self.rxfreq_onsat)
 
+        labels_layout.addLayout(rx_labels_sat_layout)
+
+        tx_labels_radio_layout = QHBoxLayout()
         # 1x Label: TX freq
-        self.txfreqtitle = QLabel("TX freq:")
+        self.txfreqtitle = QLabel("TX @ Radio:")
         self.txfreqtitle.setFont(myFont)
-        labels_layout.addWidget(self.txfreqtitle)
+        tx_labels_radio_layout.addWidget(self.txfreqtitle)
 
         self.txfreq = QLabel("0.0")
         self.txfreq.setFont(myFont)
-        labels_layout.addWidget(self.txfreq)
+        tx_labels_radio_layout.addWidget(self.txfreq)
 
+        labels_layout.addLayout(tx_labels_radio_layout)
+
+        tx_labels_sat_layout = QHBoxLayout()
         # 1x Label: TX freq Satellite
-        self.txfreqsat_lbl = QLabel("TX freq on Sat:")
-        labels_layout.addWidget(self.txfreqsat_lbl)
+        self.txfreqsat_lbl = QLabel("TX @ Sat:")
+        tx_labels_sat_layout.addWidget(self.txfreqsat_lbl)
 
         self.txfreq_onsat = QLabel("0.0")
-        labels_layout.addWidget(self.txfreq_onsat)
+        tx_labels_sat_layout.addWidget(self.txfreq_onsat)
+
+        labels_layout.addLayout(tx_labels_sat_layout)
 
         # 1x Label: RX Offset
         self.rxoffsetboxtitle = QLabel("RX Offset:")
@@ -639,25 +677,23 @@ class MainWindow(QMainWindow):
         self.txoffsetbox.valueChanged.connect(self.txoffset_value_changed)
         offset_layout.addWidget(self.txoffsetbox)
 
-         # Start Label
-        self.butontitle = QLabel("Press start to connect to Icom radio:")
-        self.butontitle.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        button_layout.addWidget(self.butontitle)
-
         # 1x QPushButton (Start)
-        self.Startbutton = QPushButton("Start")
+        self.Startbutton = QPushButton("Start Tracking")
         self.Startbutton.clicked.connect(self.init_worker)
         button_layout.addWidget(self.Startbutton)
+        self.Startbutton.setEnabled(False)
 
         # 1x QPushButton (Stop)
-        self.Stopbutton = QPushButton("Stop")
+        self.Stopbutton = QPushButton("Stop Tracking")
         self.Stopbutton.clicked.connect(self.the_stop_button_was_clicked)
         button_layout.addWidget(self.Stopbutton)
+        self.Stopbutton.setEnabled(False)
 
-        # Exit Label
-        self.exitbutontitle = QLabel("Disconect and exit:")
-        self.exitbutontitle.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        button_layout.addWidget(self.exitbutontitle)
+        # Sync to SQF freq
+        self.syncbutton = QPushButton("Sync to SQF")
+        self.syncbutton.clicked.connect(self.the_sync_button_was_clicked)
+        button_layout.addWidget(self.syncbutton)
+        self.syncbutton.setEnabled(False)
 
         # 1x QPushButton (Exit)
         self.Exitbutton = QPushButton("Exit")
@@ -669,7 +705,29 @@ class MainWindow(QMainWindow):
         self.LogText = QTextEdit()
         self.LogText.setReadOnly(True)
         self.LogText.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        downlayout.addWidget(self.LogText)
+        medlayout.addWidget(self.LogText)
+
+        # Prueba
+        sat_pos_lables_layout = QHBoxLayout()
+        self.log_sat_status_ele_lbl = QLabel("Elevation:")
+        sat_pos_lables_layout.addWidget(self.log_sat_status_ele_lbl)
+
+        self.log_sat_status_ele_val = QLabel("0.0 °")
+        sat_pos_lables_layout.addWidget(self.log_sat_status_ele_val)
+        
+        self.log_sat_status_azi_lbl = QLabel("Azimuth:")
+        sat_pos_lables_layout.addWidget(self.log_sat_status_azi_lbl)
+
+        self.log_sat_status_azi_val = QLabel("0.0 °")
+        sat_pos_lables_layout.addWidget(self.log_sat_status_azi_val)
+        
+        self.log_sat_status_height_lbl = QLabel("Height:")
+        sat_pos_lables_layout.addWidget(self.log_sat_status_height_lbl)
+
+        self.log_sat_status_height_val = QLabel("0.0 m")
+        sat_pos_lables_layout.addWidget(self.log_sat_status_height_val)
+
+        botttomlayout.addLayout(sat_pos_lables_layout)
 
         ## Menu
         self.button_action = QAction("&Main setup", self)
@@ -752,8 +810,10 @@ class MainWindow(QMainWindow):
                     self.my_satellite.mode =  lineb.split(",")[5].strip()
                     if self.my_satellite.noradid == 0 or self.my_satellite.F == 0 or self.my_satellite.I == 0:
                         self.Startbutton.setEnabled(False)
+                        self.syncbutton.setEnabled(False)
                     else:
                         self.Startbutton.setEnabled(True)
+                        self.syncbutton.setEnabled(True)
                     break
         except IOError:
             raise MyError()
@@ -825,9 +885,16 @@ class MainWindow(QMainWindow):
         self.LogText.append("Stopped")
         self.threadpool.clear()
         self.Startbutton.setEnabled(True)
+        self.Stopbutton.setEnabled(False)
     
+    def the_sync_button_was_clicked(self):
+        self.my_satellite.F = self.my_satellite.F_init
+        self.my_satellite.I = self.my_satellite.I_init
+
     def init_worker(self):
         global TRACKING_ACTIVE
+        self.syncbutton.setEnabled(True)
+        self.Stopbutton.setEnabled(True)
 
         if TRACKING_ACTIVE == False:
             TRACKING_ACTIVE = True
@@ -1025,68 +1092,122 @@ class MainWindow(QMainWindow):
                 print("All config done, starting doppler...")
                 s.sendall(b"V VFOA\n")
 
-                rx_doppler = F0
-                tx_doppler = I0
+                date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
+                myloc.date = ephem.Date(date_val)
+
+                F0 = rx_dopplercalc(self.my_satellite.tledata, self.my_satellite.F)
+                I0 = tx_dopplercalc(self.my_satellite.tledata, self.my_satellite.I)
+                user_Freq = 0;
+                user_Freq_history = [0, 0, 0, 0]
+                vfo_not_moving = 0
+                vfo_not_moving_old = 0
 
                 while TRACKING_ACTIVE == True:
                     date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
                     myloc.date = ephem.Date(date_val)
 
                     if INTERACTIVE == True:
-                        F_string = "f\n"
-                        s.send(bytes(F_string, 'ascii'))
-                        time.sleep(0.2)
-                        data = s.recv(1024)
-                        user_Freq = float(str(data).split('\\n')[0].replace("b\'",'').replace('RPRT',''))
+                        # read current RX
+                        try:
+                            F_string = "f\n"
+                            s.send(bytes(F_string, 'ascii'))
+                            time.sleep(0.2)
+                            data = s.recv(1024)
+                            user_Freq = float(str(data).split('\\n')[0].replace("b\'",'').replace('RPRT',''))
+                            updated_rx = 1
+                            user_Freq_history.pop(0)
+                            user_Freq_history.append(user_Freq)
+                        except:
+                            updated_rx = 0
+                            user_Freq = 0
 
-                        if user_Freq > 0:
-                            if abs(user_Freq - self.my_satellite.F) > 100:
-                                if user_Freq > self.my_satellite.F:
-                                    delta_F = user_Freq - self.my_satellite.F
-                                    if self.my_satellite.mode == "REV":
-                                        I0 -= delta_F
-                                        F0 += delta_F
+                        vfo_not_moving_old = vfo_not_moving
+                        vfo_not_moving = user_Freq_history.count(user_Freq_history[0]) == len(user_Freq_history)
+
+                        if user_Freq > 0 and updated_rx == 1 and vfo_not_moving and self.my_satellite.new_cal == 0:
+                            if abs(user_Freq - F0) > 1:
+                                if True:
+                                    if user_Freq > F0:
+                                        delta_F = user_Freq - F0
+                                        if self.my_satellite.mode == "REV":
+                                            self.my_satellite.I -= delta_F
+                                            I0 -= delta_F
+                                            self.my_satellite.F += delta_F
+                                        else:
+                                            self.my_satellite.I += delta_F
+                                            I0 += delta_F
+                                            self.my_satellite.F += delta_F
                                     else:
-                                        I0 += delta_F
-                                        F0 += delta_F
+                                        delta_F = F0 - user_Freq
+                                        if self.my_satellite.mode == "REV":
+                                            self.my_satellite.I += delta_F
+                                            I0 += delta_F
+                                            self.my_satellite.F -= delta_F
+                                        else:
+                                            self.my_satellite.I -= delta_F
+                                            I0 -= delta_F
+                                            self.my_satellite.F -= delta_F
+                                    F0 = user_Freq
+
+                        if updated_rx and vfo_not_moving and vfo_not_moving_old:
+                            new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
+                            if abs(new_rx_doppler-F0) > doppler_thres:
+                                rx_doppler = new_rx_doppler
+                                F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
+                                s.send(bytes(F_string, 'ascii'))
+                                F0 = rx_doppler
+                        
+                            new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
+                            if abs(new_tx_doppler-I0) > doppler_thres:
+                                tx_doppler = new_tx_doppler
+                                I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                if OPMODE == False:
+                                    s.send(bytes(I_string, 'ascii'))
                                 else:
-                                    delta_F = self.my_satellite.F - user_Freq
-                                    if self.my_satellite.mode == "REV":
-                                        I0 += delta_F
-                                        F0 -= delta_F
-                                    else:
-                                        I0 -= delta_F
-                                        F0 -= delta_F
+                                    F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                    s2.send(bytes(F2_string, 'ascii'))
+                                I0 = tx_doppler
+                    # FM sats, no dial input accepted!
+                    else:
+                        new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata,self.my_satellite.F + self.my_satellite.F_cal))
+                        new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata,self.my_satellite.I))
+                        if abs(new_rx_doppler-F0) > doppler_thres or tracking_init == 1:
+                            tracking_init = 0
+                            rx_doppler = new_rx_doppler
+                            F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
+                            s.send(bytes(F_string, 'ascii'))
+                            F0 = rx_doppler
+                            time.sleep(0.2)
+                        if abs(new_tx_doppler-I0) > doppler_thres or tracking_init == 1:
+                            tracking_init = 0
+                            tx_doppler = new_tx_doppler
+                            I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                            if OPMODE == False:
+                                s.send(bytes(I_string, 'ascii'))
+                            else:
+                                F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
+                                s2.send(bytes(F2_string, 'ascii'))
+                            I0 = tx_doppler
+                            time.sleep(0.2)
 
-                    new_rx_doppler = round(rx_dopplercalc(self.my_satellite.tledata),-1)
-                    if abs(new_rx_doppler-F0) > doppler_thres:
-                        rx_doppler = new_rx_doppler
-                        F_string = "F {the_rx_doppler:.0f}\n".format(the_rx_doppler=rx_doppler)  
-                        s.send(bytes(F_string, 'ascii'))
-                        self.my_satellite.F = rx_doppler
-                    
-                    new_tx_doppler = round(tx_dopplercalc(self.my_satellite.tledata),-1)
-                    if abs(new_tx_doppler-I0) > doppler_thres:
-                        tx_doppler = new_tx_doppler
-                        I_string = "I {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                        if OPMODE == False:
-                            s.send(bytes(I_string, 'ascii'))
-                        else:
-                            F2_string = "F {the_tx_doppler:.0f}\n".format(the_tx_doppler=tx_doppler)
-                            s2.send(bytes(F2_string, 'ascii'))
-                        self.my_satellite.I = tx_doppler
-
-                    time.sleep(1)
+                    self.my_satellite.new_cal = 0
+                    time.sleep(0.01)
 
         except socket.error:
             print("Failed to connect to Rigctld on {addr}:{port}.".format(addr=ADDRESS,port=PORT))
             sys.exit()
     
     def recurring_timer(self):
+        date_val = strftime('%Y/%m/%d %H:%M:%S', gmtime())
+        myloc.date = ephem.Date(date_val)
         self.rxfreq.setText(str(float(self.my_satellite.F)))
         self.rxfreq_onsat.setText(str(F0))
         self.txfreq.setText(str(float(self.my_satellite.I)))
         self.txfreq_onsat.setText(str(I0))
+        if self.my_satellite.tledata != "":
+            self.log_sat_status_ele_val.setText(str(sat_ele_calc(self.my_satellite.tledata)) + " °")
+            self.log_sat_status_azi_val.setText(str(sat_azi_calc(self.my_satellite.tledata)) + " °")
+            self.log_sat_status_height_val.setText(str(sat_height_calc(self.my_satellite.tledata)) + " km")
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
@@ -1140,5 +1261,23 @@ except Exception as e:
 
 app = QApplication(sys.argv)
 window = MainWindow()
+#apply_stylesheet(app, theme='dark_lightgreen.xml')
+#tooltip_stylesheet = """
+#        QToolTip {
+#            color: white;
+#            background-color: black;
+#        }
+#        QComboBox {
+#            color: white;
+#        }
+#        QSpinBox {
+#            color: white;
+#        }
+#        QLineEdit {
+#            color: white;
+#        }
+#    """
+#app.setStyleSheet(app.styleSheet()+tooltip_stylesheet)
+#window.setWindowFlag(Qt.FramelessWindowHint)
 window.show()
 app.exec()
